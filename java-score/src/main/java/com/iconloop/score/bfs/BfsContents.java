@@ -9,7 +9,6 @@ import score.annotation.Payable;
 import java.math.BigInteger;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 
 
 enum EventType {
@@ -29,35 +28,35 @@ public class BfsContents {
     // TODO Need a better way to set the allocation number between min max.
 
     private final ArrayDB<String> peers = Context.newArrayDB("peers", String.class);
-    private final VarDB<BigInteger> frontIndexOfPeers = Context.newVarDB("frontIndexOfPeers", BigInteger.class);
-    private final VarDB<BigInteger> backIndexOfPeers = Context.newVarDB("backIndexOfPeers", BigInteger.class);
+    private final VarDB<Integer> frontIndexOfPeers = Context.newVarDB("frontIndexOfPeers", Integer.class);
+    private final VarDB<Integer> backIndexOfPeers = Context.newVarDB("backIndexOfPeers", Integer.class);
     // TODO allocationMin, allocationMax are need method to set them.
-    private final VarDB<BigInteger> allocationMin = Context.newVarDB("allocationMin", BigInteger.class);
-    private final VarDB<BigInteger> allocationMax = Context.newVarDB("allocationMax", BigInteger.class);
-    private final VarDB<BigInteger> allocationMargin = Context.newVarDB("allocationMargin", BigInteger.class);
+    private final VarDB<Integer> allocationMin = Context.newVarDB("allocationMin", Integer.class);
+    private final VarDB<Integer> allocationMax = Context.newVarDB("allocationMax", Integer.class);
+    private final VarDB<Integer> allocationMargin = Context.newVarDB("allocationMargin", Integer.class);
     private final VarDB<BigInteger> minStakeForServe = Context.newVarDB("minStakeForServe", BigInteger.class);
-    private final DictDB<String, String> pinInfos;
-    private final DictDB<String, String> nodeInfos;
+    private final DictDB<String, PinInfo> pinInfos;
+    private final DictDB<String, NodeInfo> nodeInfos;
 
     public BfsContents() {
-        this.pinInfos = Context.newDictDB("pinInfos", String.class);
-        this.nodeInfos = Context.newDictDB("nodeInfos", String.class);
+        this.pinInfos = Context.newDictDB("pinInfos", PinInfo.class);
+        this.nodeInfos = Context.newDictDB("nodeInfos", NodeInfo.class);
     }
 
-    public String[] makeAllocations(String[] userAllocations, int allocationMin, int allocationMax) {
+    public String[] makeAllocations(String[] userAllocations, Integer allocationMin, Integer allocationMax) {
         if (allocationMin > this.peers.size()) {
             Context.revert(100, "Fewer peers to allocate.");
         }
-        if (allocationMin < this.allocationMin.getOrDefault(BigInteger.valueOf(1)).intValue() || allocationMin > allocationMax) {
+        if (allocationMin < this.allocationMin.getOrDefault(1) || allocationMin > allocationMax) {
             Context.revert(100, "AllocationMin Range Error!");
         }
-        if (allocationMax < this.allocationMax.getOrDefault(BigInteger.valueOf(1)).intValue()) {
+        if (allocationMax < this.allocationMax.getOrDefault(1)) {
             Context.revert(100, "AllocationMax Range Error!");
         }
 
-        int frontIndex = frontIndexOfPeers.getOrDefault(BigInteger.ZERO).intValue();
-        int backIndex = backIndexOfPeers.getOrDefault(BigInteger.valueOf(this.peers.size() - 1)).intValue();
-        int allocationMargin = this.allocationMargin.getOrDefault(BigInteger.valueOf(2)).intValue();
+        int frontIndex = frontIndexOfPeers.getOrDefault(0);
+        int backIndex = backIndexOfPeers.getOrDefault(this.peers.size() - 1);
+        int allocationMargin = this.allocationMargin.getOrDefault(2);
 
         Allocator allocator = new Allocator(Helper.ArrayDBToArray(this.peers),
                                             frontIndex,
@@ -75,15 +74,15 @@ public class BfsContents {
             Context.revert(102, e.getMessage());
         }
 
-        frontIndexOfPeers.set(BigInteger.valueOf(allocator.getFrontIndex()));
-        backIndexOfPeers.set(BigInteger.valueOf(allocator.getBackIndex()));
+        frontIndexOfPeers.set(allocator.getFrontIndex());
+        backIndexOfPeers.set(allocator.getBackIndex());
 
         return allocations;
     }
 
     @External(readonly=true)
     public Map<String, Object> get_pin(String cid) {
-        PinInfo pininfo = PinInfo.fromString(this.pinInfos.get(cid));
+        PinInfo pininfo = this.pinInfos.get(cid);
         return pininfo.toMap();
     }
 
@@ -91,9 +90,9 @@ public class BfsContents {
     public void set_default_allocation_factors(@Optional BigInteger allocation_min, @Optional BigInteger allocation_max, @Optional BigInteger allocation_margin) {
         Context.require(Context.getCaller().equals(Context.getOwner()), "Only owner can call this method.");
 
-        int allocationMin = this.allocationMin.getOrDefault(BigInteger.valueOf(1)).intValue();
-        int allocationMax = this.allocationMax.getOrDefault(BigInteger.valueOf(1)).intValue();
-        int allocationMargin = this.allocationMargin.getOrDefault(BigInteger.valueOf(2)).intValue();
+        int allocationMin = this.allocationMin.getOrDefault(1);
+        int allocationMax = this.allocationMax.getOrDefault(1);
+        int allocationMargin = this.allocationMargin.getOrDefault(2);
         boolean isChanged = false;
 
         if (allocation_min != null && allocation_min.intValue() > 0) {
@@ -120,17 +119,17 @@ public class BfsContents {
         Context.require(allocationMax >= allocationMin, "allocation_max must be greater than or equal to allocation_min.");
         Context.require(isChanged, "The allocation factors are not changed.");
 
-        this.allocationMin.set(BigInteger.valueOf(allocationMin));
-        this.allocationMax.set(BigInteger.valueOf(allocationMax));
-        this.allocationMargin.set(BigInteger.valueOf(allocationMargin));
+        this.allocationMin.set(allocationMin);
+        this.allocationMax.set(allocationMax);
+        this.allocationMargin.set(allocationMargin);
     }
 
     @External(readonly=true)
     public Map<String, Object> get_default_allocation_factors() {
         return Map.ofEntries(
-                Map.entry("allocation_min", this.allocationMin.getOrDefault(BigInteger.valueOf(1))),
-                Map.entry("allocation_max", this.allocationMax.getOrDefault(BigInteger.valueOf(1))),
-                Map.entry("allocation_margin", this.allocationMargin.getOrDefault(BigInteger.valueOf(2)))
+                Map.entry("allocation_min", this.allocationMin.getOrDefault(1)),
+                Map.entry("allocation_max", this.allocationMax.getOrDefault(1)),
+                Map.entry("allocation_margin", this.allocationMargin.getOrDefault(2))
         );
     }
 
@@ -162,23 +161,22 @@ public class BfsContents {
                     @Optional String expire_in) {
         Context.require(!cid.isEmpty(), "Blank key is not allowed.");
 
-        if(!this.pinInfos.getOrDefault(cid, "").isEmpty()) {;
+        PinInfo pininfo = this.pinInfos.get(cid);
+        if(pininfo != null) {;
             // The owner of the old cid can recreate a new pin with the same cid.
-            PinInfo pininfo = PinInfo.fromString(this.pinInfos.get(cid));
-            if (!pininfo.getString("owner").equals(Context.getCaller().toString())) {
+            if (!pininfo.checkOwner(Context.getCaller().toString())) {
                 Context.revert(101, "You do not have permission.");
             }
         }
 
-        PinInfo pininfo = new PinInfo(cid);
         String owner = Context.getCaller().toString();
         if (owner_did != null) {
             Context.require(verifySign(owner_did, owner_sign), "Invalid did signature.");
             owner = owner_did;
         }
         
-        int replicationMin = this.allocationMin.getOrDefault(BigInteger.valueOf(1)).intValue();
-        int replicationMax = this.allocationMax.getOrDefault(BigInteger.valueOf(1)).intValue();
+        Integer replicationMin = this.allocationMin.getOrDefault(1);
+        Integer replicationMax = this.allocationMax.getOrDefault(1);
 
         if (replication_min != null && replication_min.intValue() > replicationMin) {
             replicationMin = replication_min.intValue();
@@ -188,33 +186,31 @@ public class BfsContents {
         }
 
         String[] userAllocations = makeAllocations(user_allocations, replicationMin, replicationMax);
-
-        pininfo.fromParams(
-                tracker, name, comment, String.valueOf(Context.getBlockTimestamp()), owner,
-                BigInteger.valueOf(replicationMin), BigInteger.valueOf(replicationMax), userAllocations,
+        pininfo = new PinInfo(cid, tracker, name, comment, String.valueOf(Context.getBlockTimestamp()), owner,
+                replicationMin, replicationMax, userAllocations,
                 shard_size, expire_at, expire_in, BigInteger.valueOf(1));
-        this.pinInfos.set(cid, pininfo.toString());
+        this.pinInfos.set(cid, pininfo);
 
         BFSEvent(EventType.AddPin.name(), cid, "");
     }
 
     @External()
     public void unpin(String cid, @Optional String owner_did, @Optional byte[] owner_sign) {
-        Context.require(!this.pinInfos.getOrDefault(cid, "").isEmpty(), "Invalid request target.");
+        Context.require(this.pinInfos.get(cid) != null, "Invalid request target.");
 
         // Verify owner
-        PinInfo pininfo = PinInfo.fromString(this.pinInfos.get(cid));
+        PinInfo pininfo = this.pinInfos.get(cid);
         String owner = Context.getCaller().toString();
         if (owner_did != null) {
             Context.require(verifySign(owner_did, owner_sign), "Invalid did signature.");
             owner = owner_did;
         }
-        if (!pininfo.getString("owner").equals(owner)) {
+        if (!pininfo.checkOwner(owner)) {
             Context.revert(101, "You do not have permission.");
         }
 
         pininfo.unpin();
-        this.pinInfos.set(cid, pininfo.toString());
+        this.pinInfos.set(cid, pininfo);
         BFSEvent(EventType.Unpin.name(), cid, "");
     }
 
@@ -231,37 +227,36 @@ public class BfsContents {
                            @Optional String[] user_allocations,
                            @Optional String expire_at,
                            @Optional String expire_in) {
-        Context.require(!this.pinInfos.getOrDefault(cid, "").isEmpty(), "Invalid request target.");
+        Context.require(this.pinInfos.get(cid) != null, "Invalid request target.");
 
-        PinInfo pininfo = PinInfo.fromString(this.pinInfos.get(cid));
+        PinInfo pininfo = this.pinInfos.get(cid);
         String prevOwner = Context.getCaller().toString();
         if (owner_did != null) {
             Context.require(verifySign(owner_did, owner_sign), "Invalid did signature.");
             prevOwner = owner_did;
         }
-        if (!pininfo.getString("owner").equals(prevOwner)) {
+        if (!pininfo.checkOwner(prevOwner)) {
             Context.revert(101, "You do not have permission.");
         }
 
-        int replicationMin = pininfo.getInt("replication_min");
-        int replicationMax = pininfo.getInt("replication_max");
+        Integer replicationMin = pininfo.getReplicationMin();
+        Integer replicationMax = pininfo.getReplicationMax();
 
-        if (replication_min != null && replication_min.intValue() >= this.allocationMin.getOrDefault(BigInteger.valueOf(1)).intValue()) {
+        if (replication_min != null && replication_min.compareTo(BigInteger.valueOf(this.allocationMin.getOrDefault(1))) >= 0) {
             replicationMin = replication_min.intValue();
         }
-        if (replication_max != null && replication_max.intValue() >= this.allocationMax.getOrDefault(BigInteger.valueOf(2)).intValue()) {
+        if (replication_max != null && replication_max.compareTo(BigInteger.valueOf(this.allocationMax.getOrDefault(2))) >= 0) {
             replicationMax = replication_max.intValue();
         }
 
         String[] userAllocations = (user_allocations != null)? user_allocations : pininfo.userAllocations();
         String[] newAllocations = makeAllocations(userAllocations, replicationMin, replicationMax);
 
-        pininfo.fromParams(
-                tracker, name, comment, "", owner,
-                BigInteger.valueOf(replicationMin), BigInteger.valueOf(replicationMax),
-                newAllocations, BigInteger.valueOf(0), expire_at, expire_in, BigInteger.valueOf(1));
+        pininfo.update(
+                tracker, name, comment, null, owner, replicationMin, replicationMax,
+                newAllocations, BigInteger.ZERO, expire_at, expire_in, BigInteger.ONE);
 
-        this.pinInfos.set(cid, pininfo.toString());
+        this.pinInfos.set(cid, pininfo);
         BFSEvent(EventType.UpdatePin.name(), cid, "");
         if (!Helper.ArraysEqual(userAllocations, newAllocations)) {
             BFSEvent(EventType.Reallocation.name(), cid, "");
@@ -270,30 +265,30 @@ public class BfsContents {
 
     @External()
     public void remove_pin(String cid, @Optional String owner_did, @Optional byte[] owner_sign) {
-        Context.require(!this.pinInfos.getOrDefault(cid, "").isEmpty(), "Invalid request target.");
+        Context.require(this.pinInfos.get(cid) != null, "Invalid request target.");
 
         // Verify owner
-        PinInfo pininfo = PinInfo.fromString(this.pinInfos.get(cid));
+        PinInfo pininfo = this.pinInfos.get(cid);
         String owner = Context.getCaller().toString();
         if (owner_did != null) {
             Context.require(verifySign(owner_did, owner_sign), "Invalid did signature.");
             owner = owner_did;
         }
-        if (!pininfo.getString("owner").equals(owner)) {
+        if (!pininfo.checkOwner(owner)) {
             Context.revert(101, "You do not have permission.");
         }
 
-        if (pininfo.getInt("state") != 0) {
+        if (!pininfo.getState().equals(BigInteger.ZERO)) {
             Context.revert(104, "Pinned content cannot be deleted. Please unpin first.");
         }
 
-        this.pinInfos.set(cid, "");
+        this.pinInfos.set(cid, null);
         BFSEvent(EventType.RemovePin.name(), cid, "");
     }
 
     @External(readonly=true)
     public Map<String, Object> get_node(String peer_id) {
-        NodeInfo nodeInfo = NodeInfo.fromString(this.nodeInfos.get(peer_id));
+        NodeInfo nodeInfo = this.nodeInfos.get(peer_id);
         return nodeInfo.toMap(this.peers.size());
     }
 
@@ -304,9 +299,8 @@ public class BfsContents {
                          @Optional String name,
                          @Optional String comment,
                          @Optional Address owner) {
-        NodeInfo nodeInfo = new NodeInfo(peer_id);
         Context.require(!peer_id.isEmpty(), "Blank key is not allowed.");
-        Context.require(this.nodeInfos.getOrDefault(peer_id, "").isEmpty(), "It has already been added.");
+        Context.require(this.nodeInfos.get(peer_id) == null, "It has already been added.");
 
         Address ownerAddress = (owner == null) ? Context.getCaller() : owner;
         BigInteger stake = this.minStakeForServe.getOrDefault(BigInteger.ZERO);
@@ -317,26 +311,27 @@ public class BfsContents {
             stake = Context.getValue();
         }
 
-        nodeInfo.fromParams(endpoint, name, comment, String.valueOf(Context.getBlockTimestamp()), ownerAddress, stake, BigInteger.valueOf(0));
-        this.nodeInfos.set(peer_id, nodeInfo.toString());
+        NodeInfo nodeInfo = new NodeInfo(peer_id, name, endpoint, comment,
+                String.valueOf(Context.getBlockTimestamp()), ownerAddress, stake, BigInteger.valueOf(0), "");
+        this.nodeInfos.set(peer_id, nodeInfo);
 
         removeNode(peer_id);
         this.peers.add(peer_id);
-        BFSEvent(EventType.AddNode.name(), peer_id, nodeInfo.getString("endpoint"));
+        BFSEvent(EventType.AddNode.name(), peer_id, nodeInfo.getEndpoint());
     }
 
     @External()
     public void remove_node(String peer_id) {
-        Context.require(!this.nodeInfos.getOrDefault(peer_id, "").isEmpty(), "Invalid request target.");
+        Context.require(this.nodeInfos.get(peer_id) != null, "Invalid request target.");
 
-        NodeInfo nodeInfo = NodeInfo.fromString(this.nodeInfos.get(peer_id));
-        if (!nodeInfo.getString("owner").equals(Context.getCaller().toString())) {
+        NodeInfo nodeInfo = this.nodeInfos.get(peer_id);
+        if (!nodeInfo.checkOwner(Context.getCaller())) {
             Context.revert(101, "You do not have permission.");
         }
 
-        this.nodeInfos.set(peer_id, "");
+        this.nodeInfos.set(peer_id, null);
         removeNode(peer_id);
-        BFSEvent(EventType.RemoveNode.name(), peer_id, nodeInfo.getString("endpoint"));
+        BFSEvent(EventType.RemoveNode.name(), peer_id, nodeInfo.getEndpoint());
     }
 
     @External()
@@ -346,10 +341,10 @@ public class BfsContents {
                             @Optional String name,
                             @Optional String comment,
                             @Optional Address owner) {
-        Context.require(!this.nodeInfos.getOrDefault(peer_id, "").isEmpty(), "Invalid request target.");
+        Context.require(this.nodeInfos.get(peer_id) != null, "Invalid request target.");
 
-        NodeInfo nodeInfo = NodeInfo.fromString(this.nodeInfos.get(peer_id));
-        if (!nodeInfo.getString("owner").equals(Context.getCaller().toString())) {
+        NodeInfo nodeInfo = this.nodeInfos.get(peer_id);
+        if (!nodeInfo.checkOwner(Context.getCaller())) {
             Context.revert(101, "You do not have permission.");
         }
 
@@ -357,24 +352,24 @@ public class BfsContents {
         BigInteger stake = this.minStakeForServe.getOrDefault(BigInteger.ZERO);
 
         if (stake != BigInteger.ZERO) {
-            BigInteger prevStake = new BigInteger(nodeInfo.getString("stake"), 16);
+            BigInteger prevStake = nodeInfo.getStake();
             BigInteger newStake = prevStake.add(Context.getValue());
             Context.require(newStake.compareTo(ONE_ICX.multiply(stake)) >= 0);
             stake = newStake;
         }
 
-        nodeInfo.fromParams(endpoint, name, comment, "", ownerAddress, stake, BigInteger.valueOf(0));
-        this.nodeInfos.set(peer_id, nodeInfo.toString());
+        nodeInfo.update(endpoint, name, comment, null, ownerAddress, stake, BigInteger.valueOf(0));
+        this.nodeInfos.set(peer_id, nodeInfo);
 
         removeNode(peer_id);
         this.peers.add(peer_id);
-        BFSEvent(EventType.UpdateNode.name(), peer_id, nodeInfo.getString("endpoint"));
+        BFSEvent(EventType.UpdateNode.name(), peer_id, nodeInfo.getEndpoint());
     }
 
     @External()
     public void complain_node(String complain_from, String complain_to) {
-        NodeInfo complainFrom = NodeInfo.fromString(this.nodeInfos.get(complain_from));
-        if (!complainFrom.getString("owner").equals(Context.getCaller().toString())) {
+        NodeInfo complainFrom = this.nodeInfos.get(complain_from);
+        if (!complainFrom.checkOwner(Context.getCaller())) {
             Context.revert(101, "You do not have permission.");
         }
 
@@ -383,18 +378,18 @@ public class BfsContents {
             Context.revert(103, "Not exist target node.");
         }
 
-        NodeInfo complainTo = NodeInfo.fromString(this.nodeInfos.get(complain_to));
+        NodeInfo complainTo = this.nodeInfos.get(complain_to);
         BigInteger isComplained = complainTo.addComplain(complain_from, Context.getBlockTimestamp(), this.peers.size());
 
-        this.nodeInfos.set(complain_to, complainTo.toString());
+        this.nodeInfos.set(complain_to, complainTo);
         if (isComplained.equals(BigInteger.ONE)) {
-            BFSEvent(EventType.Complained.name(), complain_to, complainTo.getString("endpoint"));
+            BFSEvent(EventType.Complained.name(), complain_to, complainTo.getEndpoint());
         }
     }
 
     @External(readonly=true)
     public Map<String, Object> check_allocations(String cid) {
-        PinInfo pininfo = PinInfo.fromString(this.pinInfos.get(cid));
+        PinInfo pininfo = this.pinInfos.get(cid);
         String[] userAllocations = pininfo.userAllocations();
 
         StringBuilder builder = new StringBuilder();
@@ -408,28 +403,29 @@ public class BfsContents {
         }
         String[] complained = Helper.JsonStringToStringList("complained", builder.toString());
 
+        Map<String, Object> pinInfoMap = pininfo.toMap();
         return Map.ofEntries(
-                Map.entry("cid", pininfo.getString("cid")),
-                Map.entry("owner", pininfo.getString("owner")),
-                Map.entry("replication_min", pininfo.getInt("replication_min")),
-                Map.entry("replication_max", pininfo.getInt("replication_max")),
-                Map.entry("user_allocations", userAllocations),
+                Map.entry("cid", pinInfoMap.get("cid")),
+                Map.entry("owner", pinInfoMap.get("owner")),
+                Map.entry("replication_min", pinInfoMap.get("replication_min")),
+                Map.entry("replication_max", pinInfoMap.get("replication_max")),
+                Map.entry("user_allocations", pinInfoMap.get("user_allocations")),
                 Map.entry("complained", complained),
-                Map.entry("state", pininfo.getInt("state"))
+                Map.entry("state", pinInfoMap.get("state"))
         );
     }
 
     @External()
     public void reallocation(String cid) {
-        Context.require(!this.pinInfos.getOrDefault(cid, "").isEmpty(), "Invalid request target.");
-        PinInfo pininfo = PinInfo.fromString(this.pinInfos.get(cid));
+        Context.require(this.pinInfos.get(cid) != null, "Invalid request target.");
+        PinInfo pininfo = this.pinInfos.get(cid);
 
         String[] userAllocations = pininfo.userAllocations();
-        String[] newAllocations = makeAllocations(userAllocations, pininfo.getInt("replication_min"), pininfo.getInt("replication_max"));
+        String[] newAllocations = makeAllocations(userAllocations, pininfo.getReplicationMin().intValue(), pininfo.getReplicationMax().intValue());
         Context.require(!Helper.ArraysEqual(userAllocations, newAllocations), "reallocation is unnecessary.");
 
         pininfo.reallocation(newAllocations);
-        this.pinInfos.set(cid, pininfo.toString());
+        this.pinInfos.set(cid, pininfo);
         BFSEvent(EventType.Reallocation.name(), cid, "");
     }
 
@@ -443,12 +439,12 @@ public class BfsContents {
         int peer_count = this.peers.size();
         for (int i = 0; i < peer_count; i++) {
             peer_id = this.peers.pop();
-            this.nodeInfos.set(peer_id, "");
+            this.nodeInfos.set(peer_id, null);
         }
 
-        this.allocationMin.set(BigInteger.valueOf(1));
-        this.allocationMax.set(BigInteger.valueOf(1));
-        this.allocationMargin.set(BigInteger.valueOf(2));
+        this.allocationMin.set(1);
+        this.allocationMax.set(1);
+        this.allocationMargin.set(2);
     }
 
     @External(readonly = true)
@@ -456,7 +452,7 @@ public class BfsContents {
         Object[] allNode = new Object[this.peers.size()];
 
         for (int i=0; i < this.peers.size(); i++) {
-            NodeInfo nodeInfo = NodeInfo.fromString(this.nodeInfos.get(this.peers.get(i)));
+            NodeInfo nodeInfo = this.nodeInfos.get(this.peers.get(i));
             allNode[i] = nodeInfo.toMap(this.peers.size());
         }
 
@@ -466,8 +462,8 @@ public class BfsContents {
     @External(readonly = true)
     public Map<String, Object> get_info() {
         return Map.ofEntries(
-                Map.entry("frontIndexOfPeers", frontIndexOfPeers.getOrDefault(BigInteger.ZERO)),
-                Map.entry("backIndexOfPeers", backIndexOfPeers.getOrDefault(BigInteger.valueOf(this.peers.size()))),
+                Map.entry("frontIndexOfPeers", frontIndexOfPeers.getOrDefault(0)),
+                Map.entry("backIndexOfPeers", backIndexOfPeers.getOrDefault(this.peers.size())),
                 Map.entry("NumOfPeers", this.peers.size())
         );
     }
@@ -499,7 +495,7 @@ public class BfsContents {
     }
 
     public boolean checkComplained(String peer_id) {
-        NodeInfo nodeInfo = NodeInfo.fromString(this.nodeInfos.get(peer_id));
+        NodeInfo nodeInfo = this.nodeInfos.get(peer_id);
         return nodeInfo.complaints().isComplained(this.peers.size()).equals(BigInteger.ONE);
     }
 
