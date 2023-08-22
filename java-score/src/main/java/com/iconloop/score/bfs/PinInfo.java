@@ -21,6 +21,7 @@ public class PinInfo {
     private String expireAt;
     private String expireIn;
     private BigInteger state;
+    private BigInteger nonce;
 
 
     public PinInfo(String cid,
@@ -35,7 +36,8 @@ public class PinInfo {
                    BigInteger shardSize,
                    String expireAt,
                    String expireIn,
-                   BigInteger state) {
+                   BigInteger state,
+                   BigInteger nonce) {
         this.cid = cid;
         this.tracker = tracker;
         this.name = name;
@@ -49,6 +51,7 @@ public class PinInfo {
         this.expireAt = expireAt;
         this.expireIn = expireIn;
         this.state = state;
+        this.nonce = nonce;
     }
 
     public void update(String tracker,
@@ -75,6 +78,7 @@ public class PinInfo {
         this.expireAt = (expireAt == null) ? this.expireAt : expireAt;
         this.expireIn = (expireIn == null) ? this.expireIn : expireIn;
         this.state = (state.intValue() == 0) ? this.state : state;
+        this.nonce = this.nonce.add(BigInteger.ONE);
     }
 
     public boolean checkOwner(String owner) {
@@ -83,6 +87,7 @@ public class PinInfo {
 
     public void unpin() {
         this.state = BigInteger.ZERO;
+        this.nonce = this.nonce.add(BigInteger.ONE);
     }
 
     public String[] userAllocations() {
@@ -91,6 +96,7 @@ public class PinInfo {
 
     public void reallocation(String[] allocations) {
         this.userAllocations = allocations;
+        this.nonce = this.nonce.add(BigInteger.ONE);
     }
 
     public Integer getReplicationMin() {
@@ -105,9 +111,18 @@ public class PinInfo {
         return this.state;
     }
 
+    public BigInteger getNonce() {
+        return this.nonce;
+    }
+
+    public boolean checkNonce(BigInteger nonce) {
+        // nonce should be increased by 1
+        return this.nonce.equals(nonce.subtract(BigInteger.ONE));
+    }
+
     public static void writeObject(ObjectWriter w, PinInfo t) {
         String userAllocations = Helper.StringListToJsonString(t.userAllocations);
-        w.beginList(13);
+        w.beginList(14);
         w.writeNullable(t.cid);
         w.writeNullable(t.tracker);
         w.writeNullable(t.name);
@@ -121,6 +136,7 @@ public class PinInfo {
         w.writeNullable(t.expireAt);
         w.writeNullable(t.expireIn);
         w.write(t.state);
+        w.write(t.nonce);
         w.end();
     }
 
@@ -139,8 +155,8 @@ public class PinInfo {
                 r.readBigInteger(),
                 r.readNullable(String.class),
                 r.readNullable(String.class),
-                r.readBigInteger()
-        );
+                r.readBigInteger(),
+                r.readBigInteger());
         r.end();
         return t;
     }
@@ -159,7 +175,8 @@ public class PinInfo {
                 Map.entry("shard_size", this.shardSize),
                 Map.entry("expire_at", this.expireAt),
                 Map.entry("expire_in", this.expireIn),
-                Map.entry("state", this.state)
+                Map.entry("state", this.state),
+                Map.entry("nonce", this.nonce)
         );
     }
 }

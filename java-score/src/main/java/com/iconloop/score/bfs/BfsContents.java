@@ -37,10 +37,22 @@ public class BfsContents {
     private final VarDB<BigInteger> minStakeForServe = Context.newVarDB("minStakeForServe", BigInteger.class);
     private final DictDB<String, PinInfo> pinInfos;
     private final DictDB<String, NodeInfo> nodeInfos;
+    private final VarDB<Address> didSummaryScore = Context.newVarDB("didSummaryScore", Address.class);
 
     public BfsContents() {
         this.pinInfos = Context.newDictDB("pinInfos", PinInfo.class);
         this.nodeInfos = Context.newDictDB("nodeInfos", NodeInfo.class);
+    }
+
+    @External()
+    public void set_did_summary_score(Address did_summary_score) {
+        Context.require(Context.getCaller().equals(Context.getOwner()), "Only owner can call this method.");
+        this.didSummaryScore.set(did_summary_score);
+    }
+
+    @External(readonly=true)
+    public Address get_did_summary_score() {
+        return this.didSummaryScore.getOrDefault(null);
     }
 
     public String[] makeAllocations(String[] userAllocations, Integer allocationMin, Integer allocationMax) {
@@ -162,7 +174,7 @@ public class BfsContents {
         Context.require(!cid.isEmpty(), "Blank key is not allowed.");
 
         PinInfo pininfo = this.pinInfos.get(cid);
-        if(pininfo != null) {;
+        if(pininfo != null) {
             // The owner of the old cid can recreate a new pin with the same cid.
             if (!pininfo.checkOwner(Context.getCaller().toString())) {
                 Context.revert(101, "You do not have permission.");
@@ -170,9 +182,12 @@ public class BfsContents {
         }
 
         String owner = Context.getCaller().toString();
+        BigInteger contentNonce = BigInteger.ZERO;
         if (owner_did != null) {
-            Context.require(verifySign(owner_did, owner_sign), "Invalid did signature.");
-            owner = owner_did;
+            DidMessage didMessage = getDidMessage(owner_did, owner_sign);
+            owner = didMessage.did;
+            contentNonce = didMessage.nonce;
+            Context.require(cid.equals(didMessage.target), "Invalid Content(PinInfo) target.");
         }
         
         Integer replicationMin = this.allocationMin.getOrDefault(1);
@@ -188,30 +203,33 @@ public class BfsContents {
         String[] userAllocations = makeAllocations(user_allocations, replicationMin, replicationMax);
         pininfo = new PinInfo(cid, tracker, name, comment, String.valueOf(Context.getBlockTimestamp()), owner,
                 replicationMin, replicationMax, userAllocations,
-                shard_size, expire_at, expire_in, BigInteger.valueOf(1));
+                shard_size, expire_at, expire_in, BigInteger.valueOf(1), contentNonce);
         this.pinInfos.set(cid, pininfo);
 
-        BFSEvent(EventType.AddPin.name(), cid, "");
+        BFSEvent(EventType.AddPin.name(), cid, "", pininfo.getNonce());
     }
 
     @External()
     public void unpin(String cid, @Optional String owner_did, @Optional byte[] owner_sign) {
-        Context.require(this.pinInfos.get(cid) != null, "Invalid request target.");
+        PinInfo pininfo = this.pinInfos.get(cid);
+        Context.require(pininfo != null, "Invalid request target.");
 
         // Verify owner
-        PinInfo pininfo = this.pinInfos.get(cid);
         String owner = Context.getCaller().toString();
         if (owner_did != null) {
-            Context.require(verifySign(owner_did, owner_sign), "Invalid did signature.");
-            owner = owner_did;
+            DidMessage didMessage = getDidMessage(owner_did, owner_sign);
+            owner = didMessage.did;
+            Context.require(pininfo.checkNonce(didMessage.nonce), "Invalid Content(PinInfo) nonce.");
+            Context.require(cid.equals(didMessage.target), "Invalid Content(PinInfo) target.");
         }
+
         if (!pininfo.checkOwner(owner)) {
             Context.revert(101, "You do not have permission.");
         }
 
         pininfo.unpin();
         this.pinInfos.set(cid, pininfo);
-        BFSEvent(EventType.Unpin.name(), cid, "");
+        BFSEvent(EventType.Unpin.name(), cid, "", pininfo.getNonce());
     }
 
     @External()
@@ -227,13 +245,15 @@ public class BfsContents {
                            @Optional String[] user_allocations,
                            @Optional String expire_at,
                            @Optional String expire_in) {
-        Context.require(this.pinInfos.get(cid) != null, "Invalid request target.");
-
         PinInfo pininfo = this.pinInfos.get(cid);
+        Context.require(pininfo != null, "Invalid request target.");
+
         String prevOwner = Context.getCaller().toString();
         if (owner_did != null) {
-            Context.require(verifySign(owner_did, owner_sign), "Invalid did signature.");
-            prevOwner = owner_did;
+            DidMessage didMessage = getDidMessage(owner_did, owner_sign);
+            prevOwner = didMessage.did;
+            Context.require(pininfo.checkNonce(didMessage.nonce), "Invalid Content(PinInfo) nonce.");
+            Context.require(cid.equals(didMessage.target), "Invalid Content(PinInfo) target.");
         }
         if (!pininfo.checkOwner(prevOwner)) {
             Context.revert(101, "You do not have permission.");
@@ -257,22 +277,26 @@ public class BfsContents {
                 newAllocations, BigInteger.ZERO, expire_at, expire_in, BigInteger.ONE);
 
         this.pinInfos.set(cid, pininfo);
-        BFSEvent(EventType.UpdatePin.name(), cid, "");
+        BFSEvent(EventType.UpdatePin.name(), cid, "", pininfo.getNonce());
         if (!Helper.ArraysEqual(userAllocations, newAllocations)) {
-            BFSEvent(EventType.Reallocation.name(), cid, "");
+            BFSEvent(EventType.Reallocation.name(), cid, "", pininfo.getNonce());
         }
     }
 
     @External()
     public void remove_pin(String cid, @Optional String owner_did, @Optional byte[] owner_sign) {
-        Context.require(this.pinInfos.get(cid) != null, "Invalid request target.");
+        PinInfo pininfo = this.pinInfos.get(cid);
+        Context.require(pininfo != null, "Invalid request target.");
 
         // Verify owner
-        PinInfo pininfo = this.pinInfos.get(cid);
+        BigInteger contentNonce = pininfo.getNonce();
         String owner = Context.getCaller().toString();
         if (owner_did != null) {
-            Context.require(verifySign(owner_did, owner_sign), "Invalid did signature.");
-            owner = owner_did;
+            DidMessage didMessage = getDidMessage(owner_did, owner_sign);
+            owner = didMessage.did;
+            contentNonce = didMessage.nonce;
+            Context.require(pininfo.checkNonce(didMessage.nonce), "Invalid Content(PinInfo) nonce.");
+            Context.require(cid.equals(didMessage.target), "Invalid Content(PinInfo) target.");
         }
         if (!pininfo.checkOwner(owner)) {
             Context.revert(101, "You do not have permission.");
@@ -283,7 +307,7 @@ public class BfsContents {
         }
 
         this.pinInfos.set(cid, null);
-        BFSEvent(EventType.RemovePin.name(), cid, "");
+        BFSEvent(EventType.RemovePin.name(), cid, "", contentNonce);
     }
 
     @External(readonly=true)
@@ -317,7 +341,7 @@ public class BfsContents {
 
         removeNode(peer_id);
         this.peers.add(peer_id);
-        BFSEvent(EventType.AddNode.name(), peer_id, nodeInfo.getEndpoint());
+        BFSEvent(EventType.AddNode.name(), peer_id, nodeInfo.getEndpoint(), BigInteger.ZERO);
     }
 
     @External()
@@ -331,7 +355,7 @@ public class BfsContents {
 
         this.nodeInfos.set(peer_id, null);
         removeNode(peer_id);
-        BFSEvent(EventType.RemoveNode.name(), peer_id, nodeInfo.getEndpoint());
+        BFSEvent(EventType.RemoveNode.name(), peer_id, nodeInfo.getEndpoint(), BigInteger.ZERO);
     }
 
     @External()
@@ -351,7 +375,7 @@ public class BfsContents {
         Address ownerAddress = (owner == null) ? Context.getCaller() : owner;
         BigInteger stake = this.minStakeForServe.getOrDefault(BigInteger.ZERO);
 
-        if (stake != BigInteger.ZERO) {
+        if (!stake.equals(BigInteger.ZERO)) {
             BigInteger prevStake = nodeInfo.getStake();
             BigInteger newStake = prevStake.add(Context.getValue());
             Context.require(newStake.compareTo(ONE_ICX.multiply(stake)) >= 0);
@@ -363,7 +387,7 @@ public class BfsContents {
 
         removeNode(peer_id);
         this.peers.add(peer_id);
-        BFSEvent(EventType.UpdateNode.name(), peer_id, nodeInfo.getEndpoint());
+        BFSEvent(EventType.UpdateNode.name(), peer_id, nodeInfo.getEndpoint(), BigInteger.ZERO);
     }
 
     @External()
@@ -383,7 +407,7 @@ public class BfsContents {
 
         this.nodeInfos.set(complain_to, complainTo);
         if (isComplained.equals(BigInteger.ONE)) {
-            BFSEvent(EventType.Complained.name(), complain_to, complainTo.getEndpoint());
+            BFSEvent(EventType.Complained.name(), complain_to, complainTo.getEndpoint(), BigInteger.ZERO);
         }
     }
 
@@ -417,16 +441,16 @@ public class BfsContents {
 
     @External()
     public void reallocation(String cid) {
-        Context.require(this.pinInfos.get(cid) != null, "Invalid request target.");
         PinInfo pininfo = this.pinInfos.get(cid);
+        Context.require(pininfo != null, "Invalid request target.");
 
         String[] userAllocations = pininfo.userAllocations();
-        String[] newAllocations = makeAllocations(userAllocations, pininfo.getReplicationMin().intValue(), pininfo.getReplicationMax().intValue());
+        String[] newAllocations = makeAllocations(userAllocations, pininfo.getReplicationMin(), pininfo.getReplicationMax());
         Context.require(!Helper.ArraysEqual(userAllocations, newAllocations), "reallocation is unnecessary.");
 
         pininfo.reallocation(newAllocations);
         this.pinInfos.set(cid, pininfo);
-        BFSEvent(EventType.Reallocation.name(), cid, "");
+        BFSEvent(EventType.Reallocation.name(), cid, "", pininfo.getNonce());
     }
 
     @External()
@@ -500,9 +524,23 @@ public class BfsContents {
     }
 
     private boolean verifySign(String msg, byte[] sign) {
-        byte[] msgHash = Context.hash("sha3-256", msg.getBytes());
-        byte[] publicKey = Context.recoverKey("ecdsa-secp256k1", msgHash, sign, false);
-        return Context.verifySignature("ecdsa-secp256k1", msgHash, sign, publicKey);
+        if (this.didSummaryScore.getOrDefault(null) == null) {
+            Context.revert(102, "No External SCORE to verify DID.");
+        }
+
+        DidMessage didMessage = Helper.DidMessageParser(msg);
+        String publicKey = (String) Context.call(this.didSummaryScore.get(), "getPublicKey", didMessage.did, didMessage.kid);
+
+        byte[] msgHash = Context.hash("keccak-256", msg.getBytes());
+        byte[] recoveredKeyBytes = Context.recoverKey("ecdsa-secp256k1", msgHash, sign, false);
+        String recoveredKey = new BigInteger(recoveredKeyBytes).toString(16);
+
+        return publicKey.equals(recoveredKey);
+    }
+
+    private DidMessage getDidMessage(String msg, byte[] sign) {
+        Context.require(verifySign(msg, sign), "Invalid did signature.");
+        return Helper.DidMessageParser(msg);
     }
 
     @Payable
@@ -514,5 +552,5 @@ public class BfsContents {
      * Events
      */
     @EventLog
-    protected void BFSEvent(String event, String value1, String value2) {}
+    protected void BFSEvent(String event, String value1, String value2, BigInteger nonce) {}
 }
