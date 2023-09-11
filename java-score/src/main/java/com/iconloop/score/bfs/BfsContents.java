@@ -173,19 +173,19 @@ public class BfsContents {
                     @Optional String expire_in) {
         Context.require(!cid.isEmpty(), "Blank key is not allowed.");
 
-        PinInfo pininfo = this.pinInfos.get(cid);
-        if(pininfo != null) {
-            // The owner of the old cid can recreate a new pin with the same cid.
-            if (!pininfo.checkOwner(Context.getCaller().toString())) {
-                Context.revert(101, "You do not have permission.");
-            }
-        }
-
         String owner = Context.getCaller().toString();
         if (owner_did != null) {
             DidMessage didMessage = getDidMessage(owner_did, Context.getCaller(), cid, "pin", BigInteger.ZERO, owner_sign);
             owner = didMessage.did;
             Context.require(cid.equals(didMessage.getTarget()), "Invalid Content(PinInfo) target.");
+        }
+
+        PinInfo pininfo = this.pinInfos.get(cid);
+        if(pininfo != null) {
+            // The owner of the old cid can recreate a new pin with the same cid.
+            if (!pininfo.checkOwner(owner)) {
+                Context.revert(101, "You do not have permission.");
+            }
         }
 
         Integer replicationMin = this.allocationMin.getOrDefault(1);
