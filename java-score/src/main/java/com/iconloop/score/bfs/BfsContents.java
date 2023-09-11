@@ -184,7 +184,7 @@ public class BfsContents {
         if(pininfo != null) {
             // The owner of the old cid can recreate a new pin with the same cid.
             if (!pininfo.checkOwner(owner)) {
-                Context.revert(101, "You do not have permission.");
+                Context.revert(101, "You do not have permission. (pin)");
             }
         }
 
@@ -210,7 +210,7 @@ public class BfsContents {
     @External()
     public void unpin(String cid, @Optional String owner_did, @Optional byte[] owner_sign) {
         PinInfo pininfo = this.pinInfos.get(cid);
-        Context.require(pininfo != null, "Invalid request target.");
+        Context.require(pininfo != null, "Invalid request(unpin) target.");
 
         // Verify owner
         String owner = Context.getCaller().toString();
@@ -222,7 +222,7 @@ public class BfsContents {
         }
 
         if (!pininfo.checkOwner(owner)) {
-            Context.revert(101, "You do not have permission.");
+            Context.revert(101, "You do not have permission. (unpin)");
         }
 
         pininfo.unpin();
@@ -244,7 +244,7 @@ public class BfsContents {
                            @Optional String expire_at,
                            @Optional String expire_in) {
         PinInfo pininfo = this.pinInfos.get(cid);
-        Context.require(pininfo != null, "Invalid request target.");
+        Context.require(pininfo != null, "Invalid request(update_pin) target.");
 
         String prevOwner = Context.getCaller().toString();
         if (owner_did != null) {
@@ -254,7 +254,7 @@ public class BfsContents {
             Context.require(cid.equals(didMessage.getTarget()), "Invalid Content(PinInfo) target.");
         }
         if (!pininfo.checkOwner(prevOwner)) {
-            Context.revert(101, "You do not have permission.");
+            Context.revert(101, "You do not have permission. (update_pin)");
         }
 
         Integer replicationMin = pininfo.getReplicationMin();
@@ -284,7 +284,7 @@ public class BfsContents {
     @External()
     public void remove_pin(String cid, @Optional String owner_did, @Optional byte[] owner_sign) {
         PinInfo pininfo = this.pinInfos.get(cid);
-        Context.require(pininfo != null, "Invalid request target.");
+        Context.require(pininfo != null, "Invalid request(remove_pin) target.");
 
         // Verify owner
         String owner = Context.getCaller().toString();
@@ -295,7 +295,7 @@ public class BfsContents {
             Context.require(cid.equals(didMessage.getTarget()), "Invalid Content(PinInfo) target.");
         }
         if (!pininfo.checkOwner(owner)) {
-            Context.revert(101, "You do not have permission.");
+            Context.revert(101, "You do not have permission. (remove_pin)");
         }
 
         if (!pininfo.getState().equals(BigInteger.ZERO)) {
@@ -342,11 +342,11 @@ public class BfsContents {
 
     @External()
     public void remove_node(String peer_id) {
-        Context.require(this.nodeInfos.get(peer_id) != null, "Invalid request target.");
+        Context.require(this.nodeInfos.get(peer_id) != null, "Invalid request(remove_node) target.");
 
         NodeInfo nodeInfo = this.nodeInfos.get(peer_id);
         if (!nodeInfo.checkOwner(Context.getCaller())) {
-            Context.revert(101, "You do not have permission.");
+            Context.revert(101, "You do not have permission. (remove_node)");
         }
 
         this.nodeInfos.set(peer_id, null);
@@ -361,11 +361,11 @@ public class BfsContents {
                             @Optional String name,
                             @Optional String comment,
                             @Optional Address owner) {
-        Context.require(this.nodeInfos.get(peer_id) != null, "Invalid request target.");
+        Context.require(this.nodeInfos.get(peer_id) != null, "Invalid request(update_node) target.");
 
         NodeInfo nodeInfo = this.nodeInfos.get(peer_id);
         if (!nodeInfo.checkOwner(Context.getCaller())) {
-            Context.revert(101, "You do not have permission.");
+            Context.revert(101, "You do not have permission. (update_node)");
         }
 
         Address ownerAddress = (owner == null) ? Context.getCaller() : owner;
@@ -390,7 +390,7 @@ public class BfsContents {
     public void complain_node(String complain_from, String complain_to) {
         NodeInfo complainFrom = this.nodeInfos.get(complain_from);
         if (!complainFrom.checkOwner(Context.getCaller())) {
-            Context.revert(101, "You do not have permission.");
+            Context.revert(101, "You do not have permission. (complain_node)");
         }
 
         if (!checkPeerExist(complain_to)) {
@@ -438,7 +438,7 @@ public class BfsContents {
     @External()
     public void reallocation(String cid) {
         PinInfo pininfo = this.pinInfos.get(cid);
-        Context.require(pininfo != null, "Invalid request target.");
+        Context.require(pininfo != null, "Invalid request(reallocation) target.");
 
         String[] userAllocations = pininfo.userAllocations();
         String[] newAllocations = makeAllocations(userAllocations, pininfo.getReplicationMin(), pininfo.getReplicationMax());
