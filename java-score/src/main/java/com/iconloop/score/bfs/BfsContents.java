@@ -309,7 +309,7 @@ public class BfsContents {
     @External(readonly=true)
     public Map<String, Object> get_node(String peer_id) {
         NodeInfo nodeInfo = this.nodeInfos.get(peer_id);
-        return nodeInfo.toMap(this.peers.size());
+        return nodeInfo.toMap();
     }
 
     @External()
@@ -332,7 +332,7 @@ public class BfsContents {
         }
 
         NodeInfo nodeInfo = new NodeInfo(peer_id, name, endpoint, comment,
-                String.valueOf(Context.getBlockTimestamp()), ownerAddress, stake, BigInteger.valueOf(0), "");
+                String.valueOf(Context.getBlockTimestamp()), ownerAddress, stake, BigInteger.valueOf(0), "", false);
         this.nodeInfos.set(peer_id, nodeInfo);
 
         removeNode(peer_id);
@@ -399,10 +399,10 @@ public class BfsContents {
         }
 
         NodeInfo complainTo = this.nodeInfos.get(complain_to);
-        BigInteger isComplained = complainTo.addComplain(complain_from, Context.getBlockTimestamp(), this.peers.size());
+        boolean isComplained = complainTo.addComplain(complain_from, Context.getBlockTimestamp(), this.peers.size());
 
         this.nodeInfos.set(complain_to, complainTo);
-        if (isComplained.equals(BigInteger.ONE)) {
+        if (isComplained) {
             BFSEvent(EventType.Complained.name(), complain_to, complainTo.getEndpoint(), BigInteger.ZERO);
         }
     }
@@ -473,7 +473,7 @@ public class BfsContents {
 
         for (int i=0; i < this.peers.size(); i++) {
             NodeInfo nodeInfo = this.nodeInfos.get(this.peers.get(i));
-            allNode[i] = nodeInfo.toMap(this.peers.size());
+            allNode[i] = nodeInfo.toMap();
         }
 
         return List.of(allNode);
@@ -516,7 +516,7 @@ public class BfsContents {
 
     public boolean checkComplained(String peer_id) {
         NodeInfo nodeInfo = this.nodeInfos.get(peer_id);
-        return nodeInfo.complaints().isComplained(this.peers.size()).equals(BigInteger.ONE);
+        return nodeInfo.isComplained();
     }
 
     private boolean verifySign(DidMessage msg, byte[] sign) {

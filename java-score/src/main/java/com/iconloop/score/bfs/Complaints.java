@@ -36,7 +36,8 @@ public class Complaints {
         return this.json_obj.toString();
     }
 
-    public Map<String, Object> toMap(int nodeCount) {
+    public Map<String, Object> toMap() {
+        int nodeCount = this.json_obj.names().size();
         Map<String, Object> map = new HashMap<String, Object>(nodeCount);
 
         for (String key : this.json_obj.names()) {

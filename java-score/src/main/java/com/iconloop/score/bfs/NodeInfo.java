@@ -18,6 +18,7 @@ public class NodeInfo {
     private BigInteger stake;
     private BigInteger reward;
     private String complaints;
+    private Boolean complained;
 
     public NodeInfo(String peer_id,
                     String name,
@@ -27,7 +28,8 @@ public class NodeInfo {
                     Address owner,
                     BigInteger stake,
                     BigInteger reward,
-                    String complaints) {
+                    String complaints,
+                    Boolean complained) {
         this.peerId = peer_id;
         this.name = name;
         this.endpoint = endpoint;
@@ -37,6 +39,7 @@ public class NodeInfo {
         this.stake = stake;
         this.reward = reward;
         this.complaints = complaints;
+        this.complained = complained;
     }
 
     public void update(String name,
@@ -67,19 +70,22 @@ public class NodeInfo {
         return this.stake;
     }
 
-    public BigInteger addComplain(String complainFrom, long timestamp, int nodeCount) {
-        Complaints complaints = new Complaints(this.complaints);
-        complaints.addComplain(complainFrom, timestamp);
-        this.complaints = complaints.toString();
-        return complaints.isComplained(nodeCount);
+    public boolean addComplain(String complainFrom, long timestamp, int nodeCount) {
+        if(!this.complained) {
+            Complaints complaints = new Complaints(this.complaints);
+            complaints.addComplain(complainFrom, timestamp);
+            this.complaints = complaints.toString();
+            this.complained = complaints.isComplained(nodeCount).equals(BigInteger.ONE);
+        }
+        return this.complained;
     }
 
-    public Complaints complaints() {
-        return new Complaints(this.complaints);
+    public boolean isComplained() {
+        return this.complained;
     }
 
     public static void writeObject(ObjectWriter w, NodeInfo t) {
-        w.beginList(9);
+        w.beginList(10);
         w.writeNullable(t.peerId);
         w.writeNullable(t.name);
         w.writeNullable(t.endpoint);
@@ -89,6 +95,7 @@ public class NodeInfo {
         w.writeNullable(t.stake);
         w.writeNullable(t.reward);
         w.writeNullable(t.complaints);
+        w.write(t.complained);
         w.end();
     }
 
@@ -103,13 +110,14 @@ public class NodeInfo {
                 r.readAddress(),
                 r.readNullable(BigInteger.class),
                 r.readNullable(BigInteger.class),
-                r.readNullable(String.class));
+                r.readNullable(String.class),
+                r.readBoolean());
         r.end();
         return t;
     }
 
-    public Map<String, Object> toMap(int nodeCount) {
-        Complaints complaints = complaints();
+    public Map<String, Object> toMap() {
+        Complaints complaints = new Complaints(this.complaints);
         return Map.ofEntries(
                 Map.entry("peer_id", this.peerId),
                 Map.entry("endpoint", this.endpoint),
@@ -119,8 +127,8 @@ public class NodeInfo {
                 Map.entry("owner", this.owner.toString()),
                 Map.entry("stake", (this.stake == null) ? BigInteger.ZERO : this.stake),
                 Map.entry("reward", (this.reward == null) ? BigInteger.ZERO : this.reward),
-                Map.entry("complaints", complaints.toMap(nodeCount)),
-                Map.entry("complained", complaints.isComplained(nodeCount))
+                Map.entry("complaints", complaints.toMap()),
+                Map.entry("complained", this.complained)
         );
     }
 }
