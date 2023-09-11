@@ -1,5 +1,6 @@
 package com.iconloop.score.bfs;
 
+import score.Context;
 import score.ObjectReader;
 import score.ObjectWriter;
 
@@ -21,7 +22,7 @@ public class PinInfo {
     private String expireAt;
     private String expireIn;
     private BigInteger state;
-    private BigInteger nonce;
+    private BigInteger lastUpdated;
 
 
     public PinInfo(String cid,
@@ -37,21 +38,21 @@ public class PinInfo {
                    String expireAt,
                    String expireIn,
                    BigInteger state,
-                   BigInteger nonce) {
+                   BigInteger lastUpdated) {
         this.cid = cid;
         this.tracker = tracker;
-        this.name = name;
-        this.comment = comment;
+        this.name = (name == null) ? "" : name;
+        this.comment = (comment == null) ? "" : comment;
         this.created = created;
         this.owner = owner;
         this.replicationMin = replicationMin;
         this.replicationMax = replicationMax;
         this.userAllocations = userAllocations;
         this.shardSize = (shardSize == null) ? BigInteger.ZERO : shardSize;
-        this.expireAt = expireAt;
-        this.expireIn = expireIn;
+        this.expireAt = (expireAt == null) ? "" : expireAt;
+        this.expireIn = (expireIn == null) ? "" : expireIn;
         this.state = state;
-        this.nonce = nonce;
+        this.lastUpdated = (lastUpdated != null) ? lastUpdated : BigInteger.valueOf(Context.getBlockTimestamp());
     }
 
     public void update(String tracker,
@@ -78,16 +79,20 @@ public class PinInfo {
         this.expireAt = (expireAt == null) ? this.expireAt : expireAt;
         this.expireIn = (expireIn == null) ? this.expireIn : expireIn;
         this.state = (state.intValue() == 0) ? this.state : state;
-        this.nonce = this.nonce.add(BigInteger.ONE);
+        this.lastUpdated = BigInteger.valueOf(Context.getBlockTimestamp());
     }
 
     public boolean checkOwner(String owner) {
         return this.owner.equals(owner);
     }
 
+    public String getOwner() {
+        return this.owner;
+    }
+
     public void unpin() {
         this.state = BigInteger.ZERO;
-        this.nonce = this.nonce.add(BigInteger.ONE);
+        this.lastUpdated = BigInteger.valueOf(Context.getBlockTimestamp());
     }
 
     public String[] userAllocations() {
@@ -96,7 +101,7 @@ public class PinInfo {
 
     public void reallocation(String[] allocations) {
         this.userAllocations = allocations;
-        this.nonce = this.nonce.add(BigInteger.ONE);
+        this.lastUpdated = BigInteger.valueOf(Context.getBlockTimestamp());
     }
 
     public Integer getReplicationMin() {
@@ -111,13 +116,12 @@ public class PinInfo {
         return this.state;
     }
 
-    public BigInteger getNonce() {
-        return this.nonce;
+    public BigInteger getLastUpdated() {
+        return this.lastUpdated;
     }
 
-    public boolean checkNonce(BigInteger nonce) {
-        // nonce should be increased by 1
-        return this.nonce.equals(nonce.subtract(BigInteger.ONE));
+    public boolean checkLastUpdated(BigInteger lastUpdated) {
+        return this.lastUpdated.equals(lastUpdated);
     }
 
     public static void writeObject(ObjectWriter w, PinInfo t) {
@@ -136,7 +140,7 @@ public class PinInfo {
         w.writeNullable(t.expireAt);
         w.writeNullable(t.expireIn);
         w.write(t.state);
-        w.write(t.nonce);
+        w.write(t.lastUpdated);
         w.end();
     }
 
@@ -176,7 +180,7 @@ public class PinInfo {
                 Map.entry("expire_at", this.expireAt),
                 Map.entry("expire_in", this.expireIn),
                 Map.entry("state", this.state),
-                Map.entry("nonce", this.nonce)
+                Map.entry("last_updated", this.lastUpdated)
         );
     }
 }

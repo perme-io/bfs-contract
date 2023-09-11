@@ -5,9 +5,6 @@ import com.eclipsesource.json.JsonArray;
 import com.eclipsesource.json.JsonObject;
 import com.eclipsesource.json.JsonValue;
 import score.ArrayDB;
-import scorex.util.StringTokenizer;
-
-import java.math.BigInteger;
 
 public class Helper {
     public static String StringListToJsonString(String[] list) {
@@ -65,33 +62,5 @@ public class Helper {
         }
 
         return array;
-    }
-
-    public static DidMessage DidMessageParser(String message) {
-        String[] did_info = new String[4];
-        StringTokenizer st = new StringTokenizer(message, "#");
-        int countTokens = st.countTokens();
-
-        int index = 0;
-        while (st.hasMoreTokens()) {
-            did_info[index++] = st.nextToken();
-        }
-
-        String did = message;
-        String kid = "publicKey";
-        String target = "";
-        String nonce = "0";
-
-        if (countTokens >= 2) {
-            did = did_info[0];
-            kid = did_info[1];
-        }
-
-        if (countTokens == 4) {
-            target = did_info[2];
-            nonce = did_info[3];
-        }
-
-        return new DidMessage(did, kid, target, new BigInteger(nonce, 10));
     }
 }

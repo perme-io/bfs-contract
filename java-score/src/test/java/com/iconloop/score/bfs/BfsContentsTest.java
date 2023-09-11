@@ -15,22 +15,12 @@ import score.Address;
 import score.UserRevertedException;
 
 import java.math.BigInteger;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
-
-
-class DidSignature {
-    public String message;
-    public byte[] signature;
-
-    public DidSignature(String message, byte[] recoverableSerialize) {
-        this.message = message;
-        this.signature = recoverableSerialize;
-    }
-}
 
 
 public class BfsContentsTest extends TestBase {
@@ -72,8 +62,8 @@ public class BfsContentsTest extends TestBase {
 
         // Add public key to DID summary Contract
         for (int i = 0; i < owners.length; i++) {
-            DidSignature owners_sign = makeSignature(owners_did[i], owners_keyPair[i], "publicKey", "target", BigInteger.ZERO);
-            didSummaryScore.invoke(owners[0], "addPublicKey", owners_sign.message, "publicKey", owners_sign.signature);
+            DidMessage owners_sign = makeSignature(owners_did[i], owners_keyPair[i], "publicKey", owners[i].getAddress(), "", "", BigInteger.ZERO);
+            didSummaryScore.invoke(owners[i], "addPublicKey", owners_sign.getMessage(), owners_sign.getSignature());
         }
 
         // setup PRE nodes
@@ -84,27 +74,27 @@ public class BfsContentsTest extends TestBase {
         bfsContentsScore.invoke(owners[0], "add_node","TEST_NODE_4", null, null, null, null);
     }
 
-    private DidSignature makeSignature(String did, ECKeyPair keyPair, String kid, String target, BigInteger nonce) {
-        String message = did + "#" + kid + "#" + target + "#" + nonce.toString(10);
-        byte[] msgHash = Hash.sha3(message.getBytes());
-        byte[] signMsg = Hash.sha3(msgHash);
+    private DidMessage makeSignature(String did, ECKeyPair keyPair, String kid, Address from, String target, String method, BigInteger lastUpdated) {
+        DidMessage message = new DidMessage(did, kid, from, target, method, lastUpdated);
+        byte[] msgHash = Hash.sha3(message.getMessageForHash());
+        message.setHashedMessage(msgHash);
 
-        foundation.icon.icx.crypto.ECDSASignature signature = new ECDSASignature(new Bytes(keyPair.getPrivateKey()));
+        ECDSASignature signature = new ECDSASignature(new Bytes(keyPair.getPrivateKey()));
         BigInteger[] sig = signature.generateSignature(msgHash);
-        byte[] recoverableSerialize = signature.recoverableSerialize(sig, msgHash);
+        message.setSignature(signature.recoverableSerialize(sig, msgHash));
 
-        return new DidSignature(message, recoverableSerialize);
+        return message;
     }
 
     @Test
     void makeSignature() {
-        DidSignature sign = makeSignature(owners_did[0], owners_keyPair[0], "publicKey", "target", BigInteger.ZERO);
-        DidSignature sign2 = makeSignature(owners_did[0], owners_keyPair[0], "publicKey2", "target2", BigInteger.ZERO);
-        DidSignature sign3 = makeSignature(owners_did[0], owners_keyPair[0], "publicKey3", "target3", BigInteger.ZERO);
+        DidMessage sign = makeSignature(owners_did[0], owners_keyPair[0], "publicKey", owners[0].getAddress(), "", "", BigInteger.ZERO);
+        DidMessage sign2 = makeSignature(owners_did[0], owners_keyPair[0], "publicKey2", owners[0].getAddress(), "", "", BigInteger.ZERO);
+        DidMessage sign3 = makeSignature(owners_did[0], owners_keyPair[0], "publicKey3", owners[0].getAddress(), "", "", BigInteger.ZERO);
 
-        didSummaryScore.invoke(owners[0], "addPublicKey", sign.message, "publicKey", sign.signature);
-        didSummaryScore.invoke(owners[0], "addPublicKey", sign2.message, "publicKey2", sign2.signature);
-        didSummaryScore.invoke(owners[0], "addPublicKey", sign3.message, "publicKey3", sign3.signature);
+        didSummaryScore.invoke(owners[0], "addPublicKey", sign.getMessage(), sign.getSignature());
+        didSummaryScore.invoke(owners[0], "addPublicKey", sign2.getMessage(), sign2.getSignature());
+        didSummaryScore.invoke(owners[0], "addPublicKey", sign3.getMessage(), sign3.getSignature());
 
         var key1 = (String) didSummaryScore.call("getPublicKey", owners_did[0], "publicKey");
         var key2 = (String) didSummaryScore.call("getPublicKey", owners_did[0], "publicKey2");
@@ -116,58 +106,68 @@ public class BfsContentsTest extends TestBase {
     @Test
     void pin() {
         bfsContentsScore.invoke(owners[0], "pin","TEST_CID_A000", "TEST_TRACKER_URL", null, null, null, null, null, null, null, null, null, null);
-        verify(bfsContentsSpy).BFSEvent(EventType.AddPin.name(), "TEST_CID_A000", "", BigInteger.ZERO);
+        var pinInfo = (Map<String, Object>) bfsContentsScore.call("get_pin", "TEST_CID_A000");
+        verify(bfsContentsSpy).BFSEvent(EventType.AddPin.name(), "TEST_CID_A000", owners[0].getAddress().toString(), (BigInteger) pinInfo.get("last_updated"));
     }
 
     @Test
     void pinByDid() {
-        DidSignature sign = makeSignature(owners_did[0], owners_keyPair[0], "publicKey", "TEST_CID_A000", BigInteger.ZERO);
-        bfsContentsScore.invoke(owners[0], "pin", "TEST_CID_A000", "TEST_TRACKER_URL", sign.message, sign.signature, null, null, null, null, null, null, null, null);
-        verify(bfsContentsSpy).BFSEvent(EventType.AddPin.name(), "TEST_CID_A000", "", BigInteger.ZERO);
+        DidMessage sign = makeSignature(owners_did[0], owners_keyPair[0], "publicKey", owners[0].getAddress(), "TEST_CID_A000", "pin", BigInteger.ZERO);
+        bfsContentsScore.invoke(owners[0], "pin", "TEST_CID_A000", "TEST_TRACKER_URL", sign.getMessage(), sign.getSignature(), null, null, null, null, null, null, null, null);
+
+        var pinInfo = (Map<String, Object>) bfsContentsScore.call("get_pin", "TEST_CID_A000");
+        verify(bfsContentsSpy).BFSEvent(EventType.AddPin.name(), "TEST_CID_A000", owners_did[0], (BigInteger) pinInfo.get("last_updated"));
     }
 
     @Test
     void unpin() {
         bfsContentsScore.invoke(owners[0], "pin","TEST_CID_A000", "TEST_TRACKER_URL", null, null, null, null, null, null, null, null, null, null);
         bfsContentsScore.invoke(owners[0], "unpin","TEST_CID_A000");
-        verify(bfsContentsSpy).BFSEvent(EventType.Unpin.name(), "TEST_CID_A000", "", BigInteger.ONE);
+        var pinInfo = (Map<String, Object>) bfsContentsScore.call("get_pin", "TEST_CID_A000");
+        verify(bfsContentsSpy).BFSEvent(EventType.Unpin.name(), "TEST_CID_A000", owners[0].getAddress().toString(), (BigInteger) pinInfo.get("last_updated"));
     }
 
     @Test
     void unpinByDid() {
-        DidSignature sign_1 = makeSignature(owners_did[0], owners_keyPair[0], "publicKey", "TEST_CID_A000", BigInteger.ZERO);
-        bfsContentsScore.invoke(owners[0], "pin","TEST_CID_A000", "TEST_TRACKER_URL", sign_1.message, sign_1.signature, null, null, null, null, null, null, null, null);
+        DidMessage sign_1 = makeSignature(owners_did[0], owners_keyPair[0], "publicKey", owners[0].getAddress(), "TEST_CID_A000", "pin", BigInteger.ZERO);
+        bfsContentsScore.invoke(owners[0], "pin","TEST_CID_A000", "TEST_TRACKER_URL", sign_1.getMessage(), sign_1.getSignature(), null, null, null, null, null, null, null, null);
 
-        DidSignature sign_2 = makeSignature(owners_did[0], owners_keyPair[0], "publicKey", "TEST_CID_A000", BigInteger.ONE);
-        bfsContentsScore.invoke(owners[0], "unpin","TEST_CID_A000", sign_2.message, sign_2.signature);
-        verify(bfsContentsSpy).BFSEvent(EventType.Unpin.name(), "TEST_CID_A000", "", BigInteger.ONE);
+        var pinInfo = (Map<String, Object>) bfsContentsScore.call("get_pin", "TEST_CID_A000");
+        DidMessage sign_2 = makeSignature(owners_did[0], owners_keyPair[0], "publicKey", owners[0].getAddress(), "TEST_CID_A000", "unpin", (BigInteger) pinInfo.get("last_updated"));
+        bfsContentsScore.invoke(owners[0], "unpin","TEST_CID_A000", sign_2.getMessage(), sign_2.getSignature());
+        pinInfo = (Map<String, Object>) bfsContentsScore.call("get_pin", "TEST_CID_A000");
+        verify(bfsContentsSpy).BFSEvent(EventType.Unpin.name(), "TEST_CID_A000", owners_did[0], (BigInteger) pinInfo.get("last_updated"));
     }
 
     @Test
     void updatePin() {
         bfsContentsScore.invoke(owners[0], "pin","TEST_CID_A000", "TEST_TRACKER_URL", null, null, null, null, null, null, null, null, null, null);
         bfsContentsScore.invoke(owners[0], "update_pin","TEST_CID_A000", null, null, "TEST_TRACKER_URL_2", null, null, null, null, null, null, null, null);
-        verify(bfsContentsSpy).BFSEvent(EventType.UpdatePin.name(), "TEST_CID_A000", "", BigInteger.ONE);
+        var pinInfo = (Map<String, Object>) bfsContentsScore.call("get_pin", "TEST_CID_A000");
+        verify(bfsContentsSpy).BFSEvent(EventType.UpdatePin.name(), "TEST_CID_A000", owners[0].getAddress().toString(), (BigInteger) pinInfo.get("last_updated"));
     }
 
     @Test
     void updatePinByDid() {
-        DidSignature sign_1 = makeSignature(owners_did[0], owners_keyPair[0], "publicKey", "TEST_CID_A000", BigInteger.ZERO);
-        bfsContentsScore.invoke(owners[0], "pin", "TEST_CID_A000", "TEST_TRACKER_URL", sign_1.message, sign_1.signature, null, null, null, null, null, null, null, null);
+        DidMessage sign_1 = makeSignature(owners_did[0], owners_keyPair[0], "publicKey", owners[0].getAddress(), "TEST_CID_A000", "pin", BigInteger.ZERO);
+        bfsContentsScore.invoke(owners[0], "pin", "TEST_CID_A000", "TEST_TRACKER_URL", sign_1.getMessage(), sign_1.getSignature(), null, null, null, null, null, null, null, null);
 
-        DidSignature sign_2 = makeSignature(owners_did[0], owners_keyPair[0], "publicKey", "TEST_CID_A000", BigInteger.ONE);
-        bfsContentsScore.invoke(owners[0], "update_pin","TEST_CID_A000", sign_2.message, sign_2.signature, "TEST_TRACKER_URL_2", null, null, null, null, null, null, null, null);
-        verify(bfsContentsSpy).BFSEvent(EventType.UpdatePin.name(), "TEST_CID_A000", "", BigInteger.ONE);
+        var pinInfo = (Map<String, Object>) bfsContentsScore.call("get_pin", "TEST_CID_A000");
+        DidMessage sign_2 = makeSignature(owners_did[0], owners_keyPair[0], "publicKey", owners[0].getAddress(), "TEST_CID_A000", "update_pin", (BigInteger) pinInfo.get("last_updated"));
+        bfsContentsScore.invoke(owners[0], "update_pin","TEST_CID_A000", sign_2.getMessage(), sign_2.getSignature(), "TEST_TRACKER_URL_2", null, null, null, null, null, null, null, null);
+        pinInfo = (Map<String, Object>) bfsContentsScore.call("get_pin", "TEST_CID_A000");
+        verify(bfsContentsSpy).BFSEvent(EventType.UpdatePin.name(), "TEST_CID_A000", owners_did[0], (BigInteger) pinInfo.get("last_updated"));
     }
 
     @Test
     void preventUpdatePinByOthers() {
-        DidSignature sign_1 = makeSignature(owners_did[0], owners_keyPair[0], "publicKey", "TEST_CID_A000", BigInteger.ZERO);
-        bfsContentsScore.invoke(owners[0], "pin", "TEST_CID_A000", "TEST_TRACKER_URL", sign_1.message, sign_1.signature, null, null, null, null, null, null, null, null);
+        DidMessage sign_1 = makeSignature(owners_did[0], owners_keyPair[0], "publicKey", owners[0].getAddress(), "TEST_CID_A000", "pin", BigInteger.ZERO);
+        bfsContentsScore.invoke(owners[0], "pin", "TEST_CID_A000", "TEST_TRACKER_URL", sign_1.getMessage(), sign_1.getSignature(), null, null, null, null, null, null, null, null);
 
-        DidSignature sign_2 = makeSignature(owners_did[1], owners_keyPair[1], "publicKey", "TEST_CID_A000", BigInteger.ONE);
+        var pinInfo = (Map<String, Object>) bfsContentsScore.call("get_pin", "TEST_CID_A000");
+        DidMessage sign_2 = makeSignature(owners_did[1], owners_keyPair[1], "publicKey", owners[0].getAddress(), "TEST_CID_A000", "update_pin", (BigInteger) pinInfo.get("last_updated"));
         assertThrows(UserRevertedException.class, () ->
-                bfsContentsScore.invoke(owners[0], "update_pin","TEST_CID_A000", sign_2.message, sign_2.signature, "TEST_TRACKER_URL_2", null, null, null, null, null, null, null, null));
+                bfsContentsScore.invoke(owners[0], "update_pin","TEST_CID_A000", sign_2.getMessage(), sign_2.getSignature(), "TEST_TRACKER_URL_2", null, null, null, null, null, null, null, null));
     }
 
 
@@ -175,28 +175,32 @@ public class BfsContentsTest extends TestBase {
     void removePin() {
         bfsContentsScore.invoke(owners[0], "pin","TEST_CID_A000", "TEST_TRACKER_URL", null, null, null, null, null, null, null, null, null, null);
         bfsContentsScore.invoke(owners[0], "unpin","TEST_CID_A000");
+        var pinInfo = (Map<String, Object>) bfsContentsScore.call("get_pin", "TEST_CID_A000");
         bfsContentsScore.invoke(owners[0], "remove_pin","TEST_CID_A000");
-        verify(bfsContentsSpy).BFSEvent(EventType.RemovePin.name(), "TEST_CID_A000", "", BigInteger.ONE);
+        verify(bfsContentsSpy).BFSEvent(EventType.RemovePin.name(), "TEST_CID_A000", owners[0].getAddress().toString(), (BigInteger) pinInfo.get("last_updated"));
     }
 
     @Test
     void removePinByDid() {
-        DidSignature sign_1 = makeSignature(owners_did[0], owners_keyPair[0], "publicKey", "TEST_CID_A000", BigInteger.ZERO);
-        bfsContentsScore.invoke(owners[0], "pin","TEST_CID_A000", "TEST_TRACKER_URL", sign_1.message, sign_1.signature, null, null, null, null, null, null, null, null);
+        DidMessage sign_1 = makeSignature(owners_did[0], owners_keyPair[0], "publicKey", owners[0].getAddress(), "TEST_CID_A000", "pin", BigInteger.ZERO);
+        bfsContentsScore.invoke(owners[0], "pin","TEST_CID_A000", "TEST_TRACKER_URL", sign_1.getMessage(), sign_1.getSignature(), "", "", null, null, null, null, null, null);
 
-        DidSignature sign_2 = makeSignature(owners_did[0], owners_keyPair[0], "publicKey", "TEST_CID_A000", BigInteger.ONE);
-        bfsContentsScore.invoke(owners[0], "unpin", "TEST_CID_A000", sign_2.message, sign_2.signature);
+        var pinInfo = (Map<String, Object>) bfsContentsScore.call("get_pin", "TEST_CID_A000");
+        DidMessage sign_2 = makeSignature(owners_did[0], owners_keyPair[0], "publicKey", owners[0].getAddress(), "TEST_CID_A000", "unpin", (BigInteger) pinInfo.get("last_updated"));
+        bfsContentsScore.invoke(owners[0], "unpin", "TEST_CID_A000", sign_2.getMessage(), sign_2.getSignature());
 
-        DidSignature sign_3 = makeSignature(owners_did[0], owners_keyPair[0], "publicKey", "TEST_CID_A000", BigInteger.TWO);
-        bfsContentsScore.invoke(owners[0], "remove_pin", "TEST_CID_A000", sign_3.message, sign_3.signature);
-        verify(bfsContentsSpy).BFSEvent(EventType.RemovePin.name(), "TEST_CID_A000", "", BigInteger.TWO);
+        pinInfo = (Map<String, Object>) bfsContentsScore.call("get_pin", "TEST_CID_A000");
+        DidMessage sign_3 = makeSignature(owners_did[0], owners_keyPair[0], "publicKey", owners[0].getAddress(), "TEST_CID_A000", "remove_pin", (BigInteger) pinInfo.get("last_updated"));
+        bfsContentsScore.invoke(owners[0], "remove_pin", "TEST_CID_A000", sign_3.getMessage(), sign_3.getSignature());
+        verify(bfsContentsSpy).BFSEvent(EventType.RemovePin.name(), "TEST_CID_A000", owners_did[0], (BigInteger) pinInfo.get("last_updated"));
     }
 
     @Test
     void reallocationByDid() {
-        DidSignature sign_1 = makeSignature(owners_did[0], owners_keyPair[0], "publicKey", "TEST_CID_A000", BigInteger.ZERO);
-        bfsContentsScore.invoke(owners[0], "pin", "TEST_CID_A000", "TEST_TRACKER_URL", sign_1.message, sign_1.signature, null, null, null, null, null, null, null, null);
-        verify(bfsContentsSpy).BFSEvent(EventType.AddPin.name(), "TEST_CID_A000", "", BigInteger.ZERO);
+        DidMessage sign_1 = makeSignature(owners_did[0], owners_keyPair[0], "publicKey", owners[0].getAddress(), "TEST_CID_A000", "pin", BigInteger.ZERO);
+        bfsContentsScore.invoke(owners[0], "pin", "TEST_CID_A000", "TEST_TRACKER_URL", sign_1.getMessage(), sign_1.getSignature(), null, null, null, null, null, null, null, null);
+        var pinInfo = (Map<String, Object>) bfsContentsScore.call("get_pin", "TEST_CID_A000");
+        verify(bfsContentsSpy).BFSEvent(EventType.AddPin.name(), "TEST_CID_A000", owners_did[0], (BigInteger) pinInfo.get("last_updated"));
 
         assertThrows(UserRevertedException.class, () ->
                 bfsContentsScore.invoke(owners[0], "reallocation","TEST_CID_A000"));
