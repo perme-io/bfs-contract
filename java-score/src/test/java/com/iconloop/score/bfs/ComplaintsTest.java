@@ -72,8 +72,8 @@ public class ComplaintsTest {
         complaintsJson.set("peer-3", 1657660003);
 
         Complaints complaints = new Complaints(complaintsJson.toString());
-        System.out.println(complaints.toMap(complaintsJson.size()));
+        System.out.println(complaints.toMap());
 
-        assertEquals(complaints.toMap(complaintsJson.size()).get("peer-1"), "1657660001");
+        assertEquals(complaints.toMap().get("peer-1"), "1657660001");
     }
 }
