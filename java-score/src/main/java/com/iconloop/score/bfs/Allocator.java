@@ -65,7 +65,7 @@ public class Allocator {
         // Add userAllocations given by caller first
         if (this.userAllocations != null && this.userAllocations.length > 0) {
             for (String allocation : this.userAllocations) {
-                if (checkPeerExist(allocation) && !checkComplained(allocation) && checkPeerUnique(allocations, allocation)) {
+                if (checkPeerExist(allocation) && !checkComplained(allocation)) {
                     allocations[allocationIndex] = allocation;
                     allocationIndex++;
                     allocationCount++;

@@ -56,10 +56,7 @@ public class AllocationTest {
 
         String[] peers = new String[]{"Alice0", "Alice1", "Alice2", "Alice3", "Alice4"};
 
-        Allocator allocator = new Allocator(peers, 0, -1, new String[]{"Alice1", "Alice1"}, 2, 3, 0, bfsContents);
-        assertTrue(Helper.ArraysEqual(new String[]{"Alice1", "Alice0"}, allocator.makeAllocations()));
-
-        allocator = new Allocator(peers, 0, -1, null, 3, 5, 2, bfsContents);
+        Allocator allocator = new Allocator(peers, 0, -1, null, 3, 5, 2, bfsContents);
         assertTrue(Helper.ArraysEqual(new String[]{"Alice0", "Alice4", "Alice1", "Alice3", "Alice2"}, allocator.makeAllocations()));
 
         allocator = new Allocator(peers, 1, 1, null, 3, 5, 2, bfsContents);
