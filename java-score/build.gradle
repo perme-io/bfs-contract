@@ -1,5 +1,16 @@
 version = '0.9.0'
 
+buildscript {
+    repositories {
+        mavenLocal()
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'foundation.icon:gradle-javaee-plugin:0.8.4'
+        classpath 'foundation.icon:icon-sdk:2.5.1'
+    }
+}
+
 dependencies {
     compileOnly 'foundation.icon:javaee-api:0.9.6'
     implementation 'foundation.icon:javaee-scorex:0.5.4.1'
@@ -21,6 +32,24 @@ optimizedJar {
     }
 }
 
+String getConfigOrDefault(String propName, String envName, String defaultValue) {
+    if (rootProject.hasProperty(propName)) {
+        return rootProject.property(propName) as String
+    }
+    return System.getenv().getOrDefault(envName, defaultValue)
+}
+
+ext {
+    rpcUri = getConfigOrDefault('rpcUri', 'GOLOOP_RPC_URI', 'http://localhost:9080/api/v3')
+    rpcNid = ContractTask.asInteger(getConfigOrDefault('rpcNid', 'GOLOOP_RPC_NID', '0x1'))
+    rpcKsName = getConfigOrDefault('keystoreName', 'GOLOOP_RPC_KEY_STORE', '')
+    rpcKsPass = getConfigOrDefault('keystorePass', 'GOLOOP_RPC_KEY_PASS', '')
+    def rpcKsSecret = new File(getConfigOrDefault('keystoreSecret', 'GOLOOP_RPC_KEY_SECRET', ''))
+    if (rpcKsSecret.canRead()) {
+        rpcKsPass = new String(rpcKsSecret.readBytes())
+    }
+}
+
 deployJar {
     endpoints {
         lisbon {
@@ -31,13 +60,116 @@ deployJar {
             uri = 'http://localhost:9082/api/v3'
             nid = 0x3
         }
+        rpc {
+            uri = rpcUri
+            nid = rpcNid
+        }
     }
-    keystore = rootProject.hasProperty('keystoreName') ? "$keystoreName" : 'keystore.json'
-    password = rootProject.hasProperty('keystorePass') ? "$keystorePass" : 'gochain'
+    keystore = rpcKsName
+    password = rpcKsPass
     parameters {
     }
 }
 
 test {
     useJUnitPlatform()
+}
+
+import com.parameta.gradle.ContractTask
+import com.parameta.gradle.ContractCallTask
+import foundation.icon.icx.data.Address
+
+abstract class BFSCallTask extends ContractCallTask {
+    BFSCallTask() {
+        group = "BFS Contract"
+        contract.convention(asAddress(System.getenv('BFS_CONTRACT')))
+    }
+
+    @Option(option="bfsContract", description="BFS Contract address (env:BFS_CONTRACT)")
+    void optionBFSContract(String s) {
+        setContractOption(s)
+    }
+}
+
+tasks.register('getInfo', BFSCallTask) {
+    method = 'get_info'
+    description = 'Get current status of contract'
+    doOnQuery {
+        print(asRpcString(it))
+    }
+}
+
+tasks.register('allNode', BFSCallTask) {
+    method = 'all_node'
+    description = 'List all registered nodes'
+}
+
+abstract class BFSTaskAddNode extends BFSCallTask {
+    @Input
+    abstract Property<String> getNodePeerId()
+
+    @Option(option="peerId", description = "PeerID of the node to add")
+    void optionPeerId(String v) {
+        nodePeerId.set(v)
+    }
+
+    @Input
+    abstract Property<String> getNodeEndpoint()
+
+    @Option(option="endpoint", description = "Multi address of the node to register")
+    void optionEndpoint(String v) {
+        nodeEndpoint.set(v)
+    }
+
+    @Input
+    abstract Property<String> getNodeName()
+
+    @Option(option="name", description = "Name of the node to register")
+    void optionName(String v) {
+        nodeName.set(v)
+    }
+
+    @Input
+    @Optional
+    abstract Property<String> getNodeComment()
+
+    @Option(option="comment", description = "Description of the node to register")
+    void optionComment(String v) {
+        nodeComment.set(v)
+    }
+
+    @Input
+    @Optional
+    abstract Property<Address> getNodeOwner()
+
+    @Option(option="owner", description = "Owner of the node to register")
+    void optionNodeOwner(String v) {
+        nodeOwner.set(asAddress(v))
+    }
+}
+
+tasks.register('addNode', BFSTaskAddNode) {
+    method = 'add_node'
+    description = 'Register a node to the contract'
+    params.put('peer_id', providers.provider { asRpcItem(nodePeerId.get()) })
+    params.put('endpoint', providers.provider { asRpcItem(nodeEndpoint.get()) })
+    params.put('name', providers.provider { asRpcItem(nodeName.get()) })
+    params.put('comment', providers.provider { asRpcItem(nodeComment.getOrElse("")) })
+    params.put('owner', providers.provider { asRpcItem(nodeOwner.getOrNull()) })
+}
+
+abstract class BFSTaskRemoveNode extends BFSCallTask {
+    @Input
+    abstract Property<String> getNodePeerId()
+
+    @Option(option="peerId", description = "PeerID of the node to add")
+    void optionPeerId(String v) {
+        nodePeerId.set(v)
+    }
+}
+
+tasks.register('removeNode', BFSTaskRemoveNode) {
+    method = "remove_node"
+    description = 'Unregister the node from the contract'
+    params.put('peer_id', providers.provider { asRpcItem(nodePeerId.get()) })
 }
