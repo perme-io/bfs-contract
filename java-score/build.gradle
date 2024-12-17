@@ -47,6 +47,10 @@ ext {
     if (rpcKsSecret.canRead()) {
         rpcKsPass = new String(rpcKsSecret.readBytes())
     }
+    deployTarget = null
+    if (rootProject.hasProperty('deployTarget')) {
+        deployTarget = rootProject.property('deployTarget')
+    }
 }
 
 deployJar {
@@ -54,14 +58,17 @@ deployJar {
         lisbon {
             uri = 'https://lisbon.net.solidwallet.io/api/v3'
             nid = 0x2
+            to = deployTarget
         }
         local {
             uri = 'http://localhost:9082/api/v3'
             nid = 0x3
+            to = deployTarget
         }
         rpc {
             uri = rpcUri
             nid = rpcNid
+            to = deployTarget
         }
     }
     keystore = rpcKsName
