@@ -8,10 +8,9 @@ import score.annotation.Optional;
 import score.annotation.Payable;
 
 import java.math.BigInteger;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
+import scorex.util.HashMap;
 
 enum EventType {
     AddPin,
@@ -111,11 +110,10 @@ public class BfsContents implements BfsContent, BfsContentEvent{
         if(pinInfo == null || cidInfo == null){
             return null;
         }
-        Map<String,Object> pinInfoMap = pinInfo.toMap();
-        Map<String,Object> cidInfoMap = cidInfo.toMap();
 
-        Map<String,Object> retVal = new HashMap<>(pinInfoMap);
-        retVal.putAll(cidInfoMap);
+        Map<String, Object> retVal = new HashMap<>();
+        retVal.putAll(pinInfo.toMap());
+        retVal.putAll(cidInfo.toMap());
 
         return retVal;
 
