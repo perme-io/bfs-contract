@@ -29,6 +29,6 @@ public class SignatureChecker {
     }
 
     public boolean validatePayload(Payload expected) {
-        return expected.validate(payload, Context.getBlockHeight());
+        return expected.validate(payload);
     }
 }

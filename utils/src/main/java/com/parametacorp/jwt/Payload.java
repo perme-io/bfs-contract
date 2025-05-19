@@ -11,15 +11,10 @@ public class Payload {
         this.payload = payload;
     }
 
-    public boolean validate(JsonObject actual, long currentHeight) {
+    public boolean validate(JsonObject actual) {
         if (actual == null) {
             return false;
         }
-
-        //DEBUG
-        System.out.println("currentHeight: " + currentHeight);
-        System.out.println("expected: " + payload);
-        System.out.println("actual: " + actual);
 
         if (actual.get("method").asString().equals(payload.get("method").asString())) {
             JsonObject expectedParams = payload.get("params").asObject();
@@ -39,10 +34,6 @@ public class Payload {
                     }
                 } else if (expected.isNumber()) {
                     if (!actualValue.isNumber()) {
-                        return false;
-                    }
-                    if (key.equals("base_height") &&
-                            (actualValue.asLong() < expected.asLong() || currentHeight <= actualValue.asLong())) {
                         return false;
                     }
                 } else {
