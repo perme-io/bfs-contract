@@ -24,7 +24,6 @@ public interface BfsContentEvent {
      *  Add Pin -> event: "AddPin", value1: "cid", value2:"owner"
      *  UnPin -> event: "UnPin", value1: "cid", value2:"owner"
      *  Update Pin -> event: "UpdatePin", value1: "cid", value2:"owner"
-     *  Reallocation Pin -> event: "Reallocation", value1: "cid", value2:"owner"
      *  Remove Pin -> event : "RemovePin", value1: "cid", value2:"owner"
      *  Update Group -> event : "UpdateGroup", value1: "group", value2: "owner"
      *  Add Node -> event : "AddNode", value1: "peer_id", value2: "endpoint"
