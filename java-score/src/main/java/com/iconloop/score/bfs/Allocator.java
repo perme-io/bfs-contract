@@ -36,13 +36,6 @@ public class Allocator {
         return this.bfsContents.checkPeerExist(peer_id);
     }
 
-    public boolean checkComplained(String peer_id) {
-        if (this.bfsContents == null) {
-            return false;
-        }
-        return this.bfsContents.checkComplained(peer_id);
-    }
-
     private boolean checkPeerUnique(String[] peers, String peer) {
         for (String thePeer : peers) {
             if (thePeer != null && thePeer.equals(peer)) {
@@ -65,7 +58,7 @@ public class Allocator {
         // Add userAllocations given by caller first
         if (this.userAllocations != null && this.userAllocations.length > 0) {
             for (String allocation : this.userAllocations) {
-                if (checkPeerExist(allocation) && !checkComplained(allocation) && checkPeerUnique(allocations, allocation)) {
+                if (checkPeerExist(allocation) && checkPeerUnique(allocations, allocation)) {
                     allocations[allocationIndex] = allocation;
                     allocationIndex++;
                     allocationCount++;
@@ -104,10 +97,9 @@ public class Allocator {
                     useFrontIndex = false;
                     continue;
                 }
-                if (!checkComplained(this.peers[frontIndex])) {
-                    allocations[allocationIndex] = this.peers[this.frontIndex];
-                    allocationIndex++;
-                }
+
+                allocations[allocationIndex] = this.peers[this.frontIndex];
+                allocationIndex++;
                 this.frontIndex++;
                 useFrontIndex = false;
             } else {
@@ -116,10 +108,9 @@ public class Allocator {
                     useFrontIndex = true;
                     continue;
                 }
-                if (!checkComplained(this.peers[backIndex])) {
-                    allocations[allocationIndex] = this.peers[backIndex];
-                    allocationIndex++;
-                }
+
+                allocations[allocationIndex] = this.peers[backIndex];
+                allocationIndex++;
                 this.backIndex--;
                 useFrontIndex = true;
             }

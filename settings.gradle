@@ -1,2 +1,5 @@
 rootProject.name = 'bfs-contract'
-include ('java-score')
+include (
+        'java-score',
+        'utils',
+)
