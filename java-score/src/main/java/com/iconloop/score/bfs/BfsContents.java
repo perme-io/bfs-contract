@@ -14,7 +14,7 @@ import scorex.util.HashMap;
 
 enum EventType {
     AddPin,
-    Unpin,
+    UnPin,
     UpdatePin,
     RemovePin,
     Reallocation,
@@ -260,7 +260,7 @@ public class BfsContents implements BfsContent, BfsContentEvent{
         pininfo.unpin();
         CidInfo cidInfo = this.cidInfos.get(cid);
         cidInfo.setRefCnt(cidInfo.getRefCnt()-1);
-        BFSEvent(EventType.Unpin.name(), cid, owner, pininfo.getLastUpdated());
+        BFSEvent(EventType.UnPin.name(), cid, owner, pininfo.getLastUpdated());
     }
 
     @Override
