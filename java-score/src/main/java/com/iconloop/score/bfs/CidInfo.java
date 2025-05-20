@@ -11,8 +11,8 @@ import java.util.Map;
 public class CidInfo {
     private final String cid;
     private final Integer size;
-    private final Integer replicationMin;
-    private final Integer replicationMax;
+    private final BigInteger replicationMin;
+    private final BigInteger replicationMax;
     private String[] userAllocations;
     private final BigInteger shardSize;
     private Integer refCnt;
@@ -56,11 +56,11 @@ public class CidInfo {
     }
 
 
-    public Integer getReplicationMin() {
+    public BigInteger getReplicationMin() {
         return this.replicationMin;
     }
 
-    public Integer getReplicationMax() {
+    public BigInteger getReplicationMax() {
         return this.replicationMax;
     }
 
@@ -82,8 +82,8 @@ public class CidInfo {
         CidInfo t = new Builder()
                 .cid(r.readString())
                 .size(r.readInt())
-                .replicationMin(r.readInt())
-                .replicationMax(r.readInt())
+                .replicationMin(r.readBigInteger())
+                .replicationMax(r.readBigInteger())
                 .userAllocations(Helper.JsonStringToStringList("userAllocations", r.readNullable(String.class)))
                 .shardSize(r.readBigInteger())
                 .refCnt(r.readInt())
@@ -106,8 +106,8 @@ public class CidInfo {
     public static class Builder {
         private String cid;
         private Integer size;
-        private Integer replicationMin;
-        private Integer replicationMax;
+        private BigInteger replicationMin;
+        private BigInteger replicationMax;
         private String[] userAllocations;
         private BigInteger shardSize;
         private Integer refCnt;
@@ -122,12 +122,12 @@ public class CidInfo {
             return this;
         }
 
-        public Builder replicationMin(Integer replicationMin) {
+        public Builder replicationMin(BigInteger replicationMin) {
             this.replicationMin = replicationMin;
             return this;
         }
 
-        public Builder replicationMax(Integer replicationMax) {
+        public Builder replicationMax(BigInteger replicationMax) {
             this.replicationMax = replicationMax;
             return this;
         }

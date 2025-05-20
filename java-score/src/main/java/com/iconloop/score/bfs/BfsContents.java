@@ -214,8 +214,8 @@ public class BfsContents implements BfsContent, BfsContentEvent{
             var cidBuilder = new CidInfo.Builder()
                     .cid(cid)
                     .size(size)
-                    .replicationMin(replicationMin)
-                    .replicationMax(replicationMax)
+                    .replicationMin(BigInteger.valueOf(replicationMin))
+                    .replicationMax(BigInteger.valueOf(replicationMax))
                     .userAllocations(userAllocations)
                     .shardSize(this.shardSize.get());
 
