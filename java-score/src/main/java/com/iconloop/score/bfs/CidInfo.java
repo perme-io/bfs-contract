@@ -1,6 +1,5 @@
 package com.iconloop.score.bfs;
 
-import score.Context;
 import score.ObjectReader;
 import score.ObjectWriter;
 
@@ -35,7 +34,7 @@ public class CidInfo {
         return size;
     }
 
-    public String[] getUserAllocations() {
+    public String[] getUser_allocations() {
         return userAllocations;
     }
 
@@ -43,7 +42,7 @@ public class CidInfo {
         this.userAllocations = allocations;
     }
 
-    public BigInteger getShardSize() {
+    public BigInteger getShard_size() {
         return shardSize;
     }
 
@@ -56,11 +55,11 @@ public class CidInfo {
     }
 
 
-    public BigInteger getReplicationMin() {
+    public BigInteger getReplication_min() {
         return this.replicationMin;
     }
 
-    public BigInteger getReplicationMax() {
+    public BigInteger getReplication_max() {
         return this.replicationMax;
     }
 

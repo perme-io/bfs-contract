@@ -4,9 +4,6 @@ import score.Address;
 import score.ObjectReader;
 import score.ObjectWriter;
 
-import java.math.BigInteger;
-import java.util.Map;
-
 
 public class NodeInfo {
     private final String peerId;
@@ -25,7 +22,7 @@ public class NodeInfo {
         this.owner = builder.owner;
     }
 
-    public String getPeerId() {
+    public String getPeer_id() {
         return peerId;
     }
 

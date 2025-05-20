@@ -1,15 +1,10 @@
 package com.iconloop.score.bfs;
 
-import com.eclipsesource.json.Json;
-import com.eclipsesource.json.JsonObject;
-import com.eclipsesource.json.JsonValue;
-import score.Address;
 import score.Context;
 import score.ObjectReader;
 import score.ObjectWriter;
 
 import java.math.BigInteger;
-import java.util.Map;
 
 
 public class GroupInfo {
@@ -33,11 +28,11 @@ public class GroupInfo {
         return owner;
     }
 
-    public String getExpireAt() {
+    public String getExpire_at() {
         return this.expireAt;
     }
 
-    public BigInteger getLastUpdated() {
+    public BigInteger lastUpdated() {
         return this.lastUpdated;
     }
 
@@ -59,14 +54,6 @@ public class GroupInfo {
                 i.expireAt,
                 i.lastUpdated
         );
-
-//        w.beginList(4);
-//        w.writeNullable(i.group);
-//        w.writeNullable(i.owner);
-//        w.writeNullable(i.expireAt);
-//        w.write(i.lastUpdated);
-//        w.end();
-
     }
 
     public static GroupInfo readObject(ObjectReader r) {

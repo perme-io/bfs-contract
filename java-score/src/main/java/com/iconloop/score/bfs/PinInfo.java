@@ -47,7 +47,7 @@ public class PinInfo {
         return this.owner;
     }
 
-    public String getExpireAt() {
+    public String getExpire_at() {
         return expireAt;
     }
 
@@ -107,8 +107,7 @@ public class PinInfo {
                 Map.entry("name", this.name),
                 Map.entry("created", this.created),
                 Map.entry("owner", this.owner),
-                Map.entry("expire_at", this.expireAt),
-                Map.entry("last_updated", this.lastUpdated)
+                Map.entry("expire_at", this.expireAt)
         );
     }
 

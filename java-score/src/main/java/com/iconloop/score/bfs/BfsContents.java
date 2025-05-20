@@ -403,7 +403,7 @@ public class BfsContents implements BfsContent, BfsContentEvent{
     @External(readonly=true)
     public Map<String, Object> check_allocations(String cid) {
         CidInfo cidInfo = this.cidInfos.get(cid);
-        String[] userAllocations = cidInfo.getUserAllocations();
+        String[] userAllocations = cidInfo.getUser_allocations();
 
         StringBuilder builder = new StringBuilder();
         for (String allocation : userAllocations) {
@@ -417,9 +417,9 @@ public class BfsContents implements BfsContent, BfsContentEvent{
 
         return Map.ofEntries(
                 Map.entry("cid", cidInfo.getCid()),
-                Map.entry("replication_min", cidInfo.getReplicationMin()),
-                Map.entry("replication_max", cidInfo.getReplicationMax()),
-                Map.entry("user_allocations", cidInfo.getUserAllocations())
+                Map.entry("replication_min", cidInfo.getReplication_min()),
+                Map.entry("replication_max", cidInfo.getReplication_max()),
+                Map.entry("user_allocations", cidInfo.getUser_allocations())
         );
     }
 
@@ -500,7 +500,7 @@ public class BfsContents implements BfsContent, BfsContentEvent{
                 assert test != null;
             }
 
-            BFSEvent(EventType.UpdateGroup.name(), group, owner, groupInfo.getLastUpdated());
+            BFSEvent(EventType.UpdateGroup.name(), group, owner, groupInfo.lastUpdated());
         } catch (IllegalArgumentException e) {
             Context.revert("Invalid group data format: " + e.getMessage());
         }
