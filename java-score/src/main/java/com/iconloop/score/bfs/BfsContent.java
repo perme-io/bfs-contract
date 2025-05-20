@@ -25,9 +25,9 @@ public interface BfsContent {
      * {
      *     "jsonrpc": "2.0",
      *     "result": {
-     *          "allocation_min": "0x..",
-     *          "allocation_max": "0x..",
-     *          "allocation_margin": "0x.."
+     *          "allocation_min": "0x2",
+     *          "allocation_max": "0x5",
+     *          "allocation_margin": "0x2"
      *     },
      *     "id": 1
      * }
@@ -43,27 +43,27 @@ public interface BfsContent {
      * {
      *     "jsonrpc": "2.0",
      *     "result": {
-     *          "cid": "",
-     *          "group": "",
-     *          "size": 0,
-     *          "name": "",
-     *          "created": "",
-     *          "owner": "",
-     *          "replication_min": "0x..",
-     *          "replication_max": "0x..",
+     *          "cid": "zb2rhe5P4gXftAwvA4eXQ5HJwsER2owDyS9sKaQRRVQPn93bA",
+     *          "group": "parameta-group",
+     *          "size": 100,
+     *          "name": "parameta page",
+     *          "created": "1654155485919242",
+     *          "owner": "hx5b356b0c3231baa7f2b8f6833267ae1ff178f0b4",
+     *          "replication_min": "0x5",
+     *          "replication_max": "0xa",
      *          "user_allocations": [],
-     *          "shard_size": 0,
-     *          "expire_at": 0
+     *          "shard_size": "0x3039",
+     *          "expire_at": "1747709249693524"
      *     },
      *     "id": 1
      * }
      * </pre>
      *
-     * @param cid The content identifier to be pinned.
      * @param owner Owner of the pinned content (DID / Wallet)
+     * @param cid The content identifier to be pinned.
      * @return Pin information
      */
-    Map<String,Object> get_pin(String cid, String owner);
+    Map<String,Object> get_pin(String owner, String cid);
 
     /**
      * Pins the specified CID to the local IPFS node.
@@ -126,19 +126,19 @@ public interface BfsContent {
      * {
      *     "jsonrpc": "2.0",
      *     "result": {
-     *          "group": "",
-     *          "owner": "",
-     *          "expire_at": ""
+     *          "group": "parameta-group",
+     *          "owner": "hx5b356b0c3231baa7f2b8f6833267ae1ff178f0b4",
+     *          "expire_at": "1747709249693524"
      *     },
      *     "id": 1
      * }
      * </pre>
      *
-     * @param cid The content identifier to be pinned.
+     * @param owner Owner of the group
      * @param group The group to which the CID belongs
      * @return Group information
      */
-    GroupInfo get_group(String cid, String group);
+    GroupInfo get_group(String owner, String group);
 
     /**
      * Get node information
@@ -147,11 +147,12 @@ public interface BfsContent {
      * {
      *     "jsonrpc": "2.0",
      *     "result": {
-     *           "peer_id": "",
-     *           "endpoint": "",
-     *           "name": "",
-     *           "created": "",
-     *           "owner": ""
+     *           "peer_id": "zb2rhe5P4gXftAwvA4eXQ5HJwsER2owDyS9sKaQRRVQPn93bA",
+     *           "url": "https://bfs-node",
+     *           "endpoint": "1.1.1.1",
+     *           "name": "BFS Node",
+     *           "created": "1657306970885099",
+     *           "owner": "hxb461234639262da5ea29cf13ee47dd09def47427"
      *      },
      *     "id": 1
      * }
@@ -209,11 +210,12 @@ public interface BfsContent {
      * {
      *     "jsonrpc": "2.0",
      *     "result": {[
-     *           "peer_id": "",
-     *           "endpoint": "",
-     *           "name": "",
-     *           "created": "",
-     *           "owner": "",
+     *           "peer_id": "zb2rhe5P4gXftAwvA4eXQ5HJwsER2owDyS9sKaQRRVQPn93bA",
+     *           "url": "https://bfs-node",
+     *           "endpoint": "1.1.1.1",
+     *           "name": "BFS Node",
+     *           "created": "1657306970885099",
+     *           "owner": "hxb461234639262da5ea29cf13ee47dd09def47427"
      *      ]},
      *     "id": 1
      * }
@@ -230,10 +232,10 @@ public interface BfsContent {
      * {
      *     "jsonrpc": "2.0",
      *     "result": {
-     *           "cid": "",
-     *           "owner": "",
-     *           "replication_min": "0x..",
-     *           "replication_max": "0x..",
+     *           "cid": "zb2rhe5P4gXftAwvA4eXQ5HJwsER2owDyS9sKaQRRVQPn93bA",
+     *           "owner": "hx5b356b0c3231baa7f2b8f6833267ae1ff178f0b4",
+     *           "replication_min": "0x5",
+     *           "replication_max": "0xa",
      *           "user_allocations": [],
      *      },
      *     "id": 1
