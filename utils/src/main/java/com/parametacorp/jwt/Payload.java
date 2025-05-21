@@ -89,7 +89,7 @@ public class Payload {
                 params.add("cid", Json.value(cid));
             }
 
-            if (Objects.equals(method, "update_group") && group != null) {
+            if (method.equals("update_group") && group != null){
                 params.add("group", Json.value(group));
             }
 
