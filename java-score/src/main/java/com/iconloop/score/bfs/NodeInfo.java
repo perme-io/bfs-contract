@@ -10,7 +10,7 @@ public class NodeInfo {
     private String url;
     private String name;
     private String endpoint;
-    private String created;
+    private final long created;
     private Address owner;
 
     public NodeInfo(Builder builder) {
@@ -38,7 +38,7 @@ public class NodeInfo {
         return endpoint;
     }
 
-    public String getCreated() {
+    public long getCreated() {
         return created;
     }
 
@@ -49,12 +49,10 @@ public class NodeInfo {
     public void update(String name,
                        String url,
                        String endpoint,
-                       String created,
                        Address owner) {
         this.name = (name == null) ? this.name : name;
         this.url = (url == null) ? this.url : url;
         this.endpoint = (endpoint == null) ? this.endpoint : endpoint;
-        this.created = (created == null) ? this.created : created;
         this.owner = (owner == null) ? this.owner : owner;
     }
 
@@ -81,7 +79,7 @@ public class NodeInfo {
                 .url(r.readString())
                 .name(r.readNullable(String.class))
                 .endpoint(r.readNullable(String.class))
-                .created(r.readString())
+                .created(r.readLong())
                 .owner(r.readAddress()).build();
         r.end();
         return t;
@@ -104,7 +102,7 @@ public class NodeInfo {
         private String url;
         private String name;
         private String endpoint;
-        private String created;
+        private long created;
         private Address owner;
 
         public Builder peerId(String peerId) {
@@ -127,7 +125,7 @@ public class NodeInfo {
             return this;
         }
 
-        public Builder created(String created) {
+        public Builder created(long created) {
             this.created = created;
             return this;
         }

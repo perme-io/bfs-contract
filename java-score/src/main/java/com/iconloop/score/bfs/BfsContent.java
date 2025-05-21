@@ -47,7 +47,7 @@ public interface BfsContent {
      *          "group": "parameta-group",
      *          "size": 100,
      *          "name": "parameta page",
-     *          "created": "1654155485919242",
+     *          "created": 1000,
      *          "owner": "hx5b356b0c3231baa7f2b8f6833267ae1ff178f0b4",
      *          "replication_min": "0x5",
      *          "replication_max": "0xa",
@@ -151,7 +151,7 @@ public interface BfsContent {
      *           "url": "https://bfs-node",
      *           "endpoint": "1.1.1.1",
      *           "name": "BFS Node",
-     *           "created": "1657306970885099",
+     *           "created": 1000,
      *           "owner": "hxb461234639262da5ea29cf13ee47dd09def47427"
      *      },
      *     "id": 1
@@ -214,7 +214,7 @@ public interface BfsContent {
      *           "url": "https://bfs-node",
      *           "endpoint": "1.1.1.1",
      *           "name": "BFS Node",
-     *           "created": "1657306970885099",
+     *           "created": 1000,
      *           "owner": "hxb461234639262da5ea29cf13ee47dd09def47427"
      *      ]},
      *     "id": 1

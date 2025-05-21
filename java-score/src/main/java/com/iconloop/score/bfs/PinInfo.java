@@ -12,7 +12,7 @@ public class PinInfo {
     private final String cid;
     private final String group;
     private final String name;
-    private final String created;
+    private final long created;
     private final String owner;
     private BigInteger expireAt;
     private BigInteger lastUpdated;
@@ -39,7 +39,7 @@ public class PinInfo {
         return name;
     }
 
-    public String getCreated() {
+    public long getCreated() {
         return created;
     }
 
@@ -89,7 +89,7 @@ public class PinInfo {
                 .cid(r.readString())
                 .group(r.readNullable(String.class))
                 .name(r.readNullable(String.class))
-                .created(r.readString())
+                .created(r.readLong())
                 .owner(r.readString())
                 .expireAt(r.readBigInteger())
                 .lastUpdated(r.readBigInteger())
@@ -113,7 +113,7 @@ public class PinInfo {
         private String cid;
         private String group;
         private String name;
-        private String created;
+        private long created;
         private String owner;
         private BigInteger expireAt;
         private BigInteger lastUpdated;
@@ -133,7 +133,7 @@ public class PinInfo {
             return this;
         }
 
-        public Builder created(String created) {
+        public Builder created(long created) {
             this.created = created;
             return this;
         }

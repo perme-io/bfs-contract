@@ -220,7 +220,7 @@ public class BfsContents implements BfsContent, BfsContentEvent{
                 .cid(cid)
                 .group(group)
                 .name(name)
-                .created(String.valueOf(Context.getBlockTimestamp()))
+                .created(Context.getBlockHeight())
                 .owner(owner)
                 .expireAt(expire_at)
                 .lastUpdated(BigInteger.valueOf(Context.getBlockTimestamp()));
@@ -341,7 +341,7 @@ public class BfsContents implements BfsContent, BfsContentEvent{
                 .url(url)
                 .name(name)
                 .endpoint(endpoint)
-                .created(String.valueOf(Context.getBlockTimestamp()))
+                .created(Context.getBlockHeight())
                 .owner(ownerAddress);
 
         NodeInfo nodeInfo = nodeBuilder.build();
@@ -395,7 +395,7 @@ public class BfsContents implements BfsContent, BfsContentEvent{
 
         Address ownerAddress = (owner == null) ? Context.getCaller() : owner;
 
-        nodeInfo.update(name, url, endpoint, name, ownerAddress);
+        nodeInfo.update(name, url, endpoint, ownerAddress);
         this.nodeInfos.set(peer_id, nodeInfo);
 
         removeNode(peer_id);
