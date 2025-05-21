@@ -25,9 +25,8 @@ enum EventType {
 }
 
 public class BfsContents implements BfsContent, BfsContentEvent{
-    private static final BigInteger ONE_ICX = new BigInteger("1000000000000000000");
+    private final BigInteger UNPIN_STATE = BigInteger.valueOf(1);
     // TODO Need a better way to set the allocation number between min max.
-
     private final ArrayDB<String> peers = Context.newArrayDB("peers", String.class);
     private final VarDB<Integer> frontIndexOfPeers = Context.newVarDB("frontIndexOfPeers", Integer.class);
     private final VarDB<Integer> backIndexOfPeers = Context.newVarDB("backIndexOfPeers", Integer.class);
@@ -39,7 +38,7 @@ public class BfsContents implements BfsContent, BfsContentEvent{
     private final BranchDB<String, DictDB<String, PinInfo>> pinInfos = Context.newBranchDB("pinInfos", PinInfo.class);
     private final DictDB<String, CidInfo> cidInfos = Context.newDictDB("cidInfos", CidInfo.class);
     private final DictDB<String, NodeInfo> nodeInfos = Context.newDictDB("nodeInfos", NodeInfo.class);
-    private final BranchDB<String, DictDB<String, GroupInfo>> groupInfos = Context.newBranchDB("groupInfos", GroupInfo.class);
+    private final BranchDB<String, DictDB<String, BigInteger>> groupInfos = Context.newBranchDB("groupInfos", BigInteger.class);
     private final VarDB<Address> didScore = Context.newVarDB("didScore", Address.class);
 
     public BfsContents(@Optional Address did_score) {
@@ -62,6 +61,11 @@ public class BfsContents implements BfsContent, BfsContentEvent{
     public void set_shard_size(BigInteger shard_size) {
         Context.require(shard_size.compareTo(BigInteger.ZERO) > 0, "Shard size must be greater than 0.");
         this.shardSize.set(shard_size);
+    }
+
+    @External(readonly=true)
+    public BigInteger get_shard_size() {
+        return this.shardSize.get();
     }
 
     public String[] makeAllocations(Integer allocationMin, Integer allocationMax) {
@@ -114,9 +118,9 @@ public class BfsContents implements BfsContent, BfsContentEvent{
         Map<String, Object> retVal = new HashMap<>();
         retVal.putAll(pinInfo.toMap());
         retVal.putAll(cidInfo.toMap());
-
+        BigInteger existingExpireAt = this.groupInfos.at(owner).get(pinInfo.getGroup());
+        retVal.put("expire_at", (existingExpireAt != null) ? existingExpireAt : pinInfo.getExpire_at());
         return retVal;
-
     }
 
     @Override
@@ -172,13 +176,14 @@ public class BfsContents implements BfsContent, BfsContentEvent{
     @External()
     public void pin(String cid,
                     int size,
-                    String expire_at,
+                    BigInteger expire_at,
                     @Optional String group,
                     @Optional String name,
                     @Optional String did_sign) {
         Context.require(!cid.isEmpty(), "Blank key is not allowed.");
         Context.require(size > 0, "Size must be positive");
-        Context.require(expire_at != null && !expire_at.isEmpty(), "Invalid expiration");
+        BigInteger blockTimestamp = BigInteger.valueOf(Context.getBlockTimestamp());
+        Context.require(expire_at.compareTo(blockTimestamp) > 0, "expire_at must be greater than blockTimestamp");
 
         String owner = Context.getCaller().toString();
         if (did_sign != null) {
@@ -190,20 +195,7 @@ public class BfsContents implements BfsContent, BfsContentEvent{
             owner = getVerifiedDid(did_sign, expected);
         }
 
-        PinInfo pininfo = this.pinInfos.at(owner).get(cid);
-        if(pininfo != null) {
-            // The owner of the old cid can recreate a new pin with the same cid.
-            if (!pininfo.checkOwner(owner)) {
-                Context.revert(101, "You do not have permission. (pin)");
-            }
-        }
-
-        if(group != null && !group.isEmpty()) {
-            GroupInfo groupInfo = this.groupInfos.at(owner).get(group);
-            if(groupInfo == null) {
-                Context.revert(101, "The group and permission associated with the PIN are different. (pin)");
-            }
-        }
+        Context.require(get_pin(owner, cid) == null, "cid already exists");
 
         CidInfo cidInfo = this.cidInfos.get(cid);
         if (cidInfo == null) {
@@ -220,7 +212,6 @@ public class BfsContents implements BfsContent, BfsContentEvent{
                     .shardSize(this.shardSize.get());
 
             cidInfo = cidBuilder.build();
-            this.cidInfos.set(cid, cidInfo);
         }
         // If pin requests, increase the number of references.
         cidInfo.setRefCnt(cidInfo.getRefCnt()+1);
@@ -234,14 +225,18 @@ public class BfsContents implements BfsContent, BfsContentEvent{
                 .expireAt(expire_at)
                 .lastUpdated(BigInteger.valueOf(Context.getBlockTimestamp()));
 
-        pininfo = pinBuilder.build();
-        this.pinInfos.at(owner).set(cid, pininfo);
-        BFSEvent(EventType.AddPin.name(), cid, owner, pininfo.getLastUpdated());
+        PinInfo pinInfo = pinBuilder.build();
+
+        this.pinInfos.at(owner).set(cid, pinInfo);
+        this.cidInfos.set(cid, cidInfo);
+
+        BFSEvent(EventType.AddPin.name(), cid, owner, pinInfo.getLastUpdated());
     }
 
     @Override
     @External()
     public void unpin(String cid, @Optional String did_sign) {
+        Context.require(!cid.isEmpty(), "Blank key is not allowed.");
         String owner = Context.getCaller().toString();
         if (did_sign != null) {
             var expected = new Payload.Builder("unpin")
@@ -253,23 +248,24 @@ public class BfsContents implements BfsContent, BfsContentEvent{
         PinInfo pininfo = this.pinInfos.at(owner).get(cid);
         Context.require(pininfo != null, "Invalid request(unpin) target.");
 
-        if (!pininfo.checkOwner(owner)) {
-            Context.revert(101, "You do not have permission. (unpin)");
-        }
+        pininfo.setExpireAt(UNPIN_STATE);
+        pininfo.setLastUpdated(BigInteger.valueOf(Context.getBlockTimestamp()));
 
-        pininfo.unpin();
         CidInfo cidInfo = this.cidInfos.get(cid);
         cidInfo.setRefCnt(cidInfo.getRefCnt()-1);
+
+        this.pinInfos.at(owner).set(cid, pininfo);
+        this.cidInfos.set(cid, cidInfo);
+
         BFSEvent(EventType.UnPin.name(), cid, owner, pininfo.getLastUpdated());
     }
 
     @Override
     @External()
     public void update_pin(String cid,
-                           String expire_at,
+                           BigInteger expire_at,
                            @Optional String did_sign) {
-        Context.require(expire_at != null && !expire_at.isEmpty(), "Invalid expiration");
-
+        Context.require(!cid.isEmpty(), "Blank key is not allowed.");
         String owner = Context.getCaller().toString();
         if (did_sign != null) {
             var expected = new Payload.Builder("update_pin")
@@ -282,10 +278,6 @@ public class BfsContents implements BfsContent, BfsContentEvent{
         PinInfo pininfo = this.pinInfos.at(owner).get(cid);
         Context.require(pininfo != null, "Invalid request(update_pin) target.");
 
-        if (!pininfo.checkOwner(owner)) {
-            Context.revert(101, "You do not have permission. (update_pin)");
-        }
-
         pininfo.update(expire_at);
 
         this.pinInfos.at(owner).set(cid, pininfo);
@@ -295,8 +287,6 @@ public class BfsContents implements BfsContent, BfsContentEvent{
     @Override
     @External()
     public void remove_pin(String cid, @Optional String did_sign) {
-
-        // Verify owner
         String owner = Context.getCaller().toString();
         if (did_sign != null) {
             var expected = new Payload.Builder("remove_pin")
@@ -308,8 +298,12 @@ public class BfsContents implements BfsContent, BfsContentEvent{
         PinInfo pininfo = this.pinInfos.at(owner).get(cid);
         Context.require(pininfo != null, "Invalid request(remove_pin) target.");
 
-        if (!pininfo.checkOwner(owner)) {
-            Context.revert(101, "You do not have permission. (remove_pin)");
+        BigInteger existingExpireAt = this.groupInfos.at(owner).get(cid);
+        BigInteger expire_at = (existingExpireAt != null) ? existingExpireAt : pininfo.getExpire_at();
+
+        BigInteger blockTimestamp = BigInteger.valueOf(Context.getBlockTimestamp());
+        if(expire_at.compareTo(blockTimestamp) > 0){
+            Context.revert(104, "Fixed content can only be deleted after unpinning or expiration.");
         }
 
         this.pinInfos.at(owner).set(cid, null);
@@ -355,7 +349,12 @@ public class BfsContents implements BfsContent, BfsContentEvent{
 
         removeNode(peer_id);
         this.peers.add(peer_id);
-        BFSEvent(EventType.AddNode.name(), peer_id, nodeInfo.getEndpoint(), BigInteger.ZERO);
+
+        if (endpoint != null) {
+            BFSEvent(EventType.AddNode.name(), peer_id, endpoint, BigInteger.ZERO);
+        }else {
+            BFSEvent(EventType.AddNode.name(), peer_id, "", BigInteger.ZERO);
+        }
     }
 
     @Override
@@ -370,7 +369,12 @@ public class BfsContents implements BfsContent, BfsContentEvent{
 
         this.nodeInfos.set(peer_id, null);
         removeNode(peer_id);
-        BFSEvent(EventType.RemoveNode.name(), peer_id, nodeInfo.getEndpoint(), BigInteger.ZERO);
+        if (nodeInfo.getEndpoint() != null) {
+            BFSEvent(EventType.RemoveNode.name(), peer_id, nodeInfo.getEndpoint(), BigInteger.ZERO);
+        }else {
+            BFSEvent(EventType.RemoveNode.name(), peer_id, "", BigInteger.ZERO);
+        }
+
     }
 
     @Override
@@ -396,12 +400,18 @@ public class BfsContents implements BfsContent, BfsContentEvent{
 
         removeNode(peer_id);
         this.peers.add(peer_id);
-        BFSEvent(EventType.UpdateNode.name(), peer_id, nodeInfo.getEndpoint(), BigInteger.ZERO);
+        if(nodeInfo.getEndpoint() != null) {
+            BFSEvent(EventType.UpdateNode.name(), peer_id, nodeInfo.getEndpoint(), BigInteger.ZERO);
+        }else{
+            BFSEvent(EventType.UpdateNode.name(), peer_id, "", BigInteger.ZERO);
+        }
+
     }
 
     @Override
     @External(readonly=true)
     public Map<String, Object> check_allocations(String cid) {
+        Context.require(cid != null, "Invalid request(check_allocations) target.");
         CidInfo cidInfo = this.cidInfos.get(cid);
         String[] userAllocations = cidInfo.getUser_allocations();
 
@@ -466,9 +476,8 @@ public class BfsContents implements BfsContent, BfsContentEvent{
 
     @Override
     @External
-    public void update_group(String group, String expire_at, @Optional String did_sign) {
+    public void update_group(String group, BigInteger expire_at, @Optional String did_sign) {
         Context.require(!group.isEmpty(), "Blank key is not allowed.");
-
         String owner = Context.getCaller().toString();
         if (did_sign != null) {
             var expected = new Payload.Builder("update_group")
@@ -479,38 +488,22 @@ public class BfsContents implements BfsContent, BfsContentEvent{
         }
 
         try {
-            GroupInfo groupInfo = this.groupInfos.at(owner).get(group);
-            if (groupInfo != null) {
-                // Update an existing group
-                if (!groupInfo.checkOwner(owner)) {
-                    Context.revert(101, "You do not have permission. (group)");
-                }
-                groupInfo.update(expire_at);
-            } else {
-                // Create a new group
-                groupInfo = new GroupInfo.Builder()
-                        .group(group)
-                        .expireAt(expire_at)
-                        .owner(owner)
-                        .lastUpdated(BigInteger.valueOf(Context.getBlockTimestamp()))
-                        .build();
-
-                this.groupInfos.at(owner).set(group, groupInfo);
-                GroupInfo test = this.groupInfos.at(owner).get(group);
-                assert test != null;
-            }
-
-            BFSEvent(EventType.UpdateGroup.name(), group, owner, groupInfo.lastUpdated());
+            this.groupInfos.at(owner).set(group, expire_at);
+            BFSEvent(EventType.UpdateGroup.name(), group, owner, BigInteger.valueOf(Context.getBlockTimestamp()));
         } catch (IllegalArgumentException e) {
             Context.revert("Invalid group data format: " + e.getMessage());
         }
 
     }
 
-    @External
     @Override
-    public GroupInfo get_group(String owner, String group) {
-        return this.groupInfos.at(owner).get(group);
+    @External(readonly = true)
+    public Map<String,Object> get_group(String owner, String group) {
+        return Map.ofEntries(
+                Map.entry("group", group),
+                Map.entry("owner", owner),
+                Map.entry("expire_at", this.groupInfos.at(owner).get(group))
+        );
     }
 
 
@@ -538,11 +531,6 @@ public class BfsContents implements BfsContent, BfsContentEvent{
             }
         }
         return false;
-    }
-
-    @Payable
-    public void fallback() {
-        // just receive incoming funds
     }
 
     private String getVerifiedDid(String did_sign, Payload expected){

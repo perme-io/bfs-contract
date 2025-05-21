@@ -16,8 +16,8 @@ public class NodeInfo {
     public NodeInfo(Builder builder) {
         this.peerId = builder.peerId;
         this.url = builder.url;
-        this.name = builder.name;
-        this.endpoint = builder.endpoint;
+        this.name = (builder.name == null) ? "" : builder.name;
+        this.endpoint = (builder.endpoint == null) ? "" : builder.endpoint;
         this.created = builder.created;
         this.owner = builder.owner;
     }

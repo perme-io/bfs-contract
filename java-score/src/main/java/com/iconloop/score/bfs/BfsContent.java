@@ -77,7 +77,7 @@ public interface BfsContent {
      */
     void pin(String cid,
              int size,
-             String expire_at,
+             BigInteger expire_at,
              @Optional String group,
              @Optional String name,
              @Optional String did_sign);
@@ -98,7 +98,7 @@ public interface BfsContent {
      * @param did_sign (Optional) DID signature (JWT)
      */
     void update_pin(String cid,
-                    String expire_at,
+                    BigInteger expire_at,
                     @Optional String did_sign);
 
 
@@ -117,7 +117,7 @@ public interface BfsContent {
      * @param expire_at Group expiration time (Micro second)
      * @param did_sign (Optional) DID signature (JWT)
      */
-    void update_group(String group, String expire_at, @Optional String did_sign);
+    void update_group(String group, BigInteger expire_at, @Optional String did_sign);
 
     /**
      * Get group information
@@ -138,7 +138,7 @@ public interface BfsContent {
      * @param group The group to which the CID belongs
      * @return Group information
      */
-    GroupInfo get_group(String owner, String group);
+    Map<String,Object> get_group(String owner, String group);
 
     /**
      * Get node information

@@ -4,6 +4,9 @@ import com.eclipsesource.json.Json;
 import com.eclipsesource.json.JsonObject;
 import com.eclipsesource.json.JsonValue;
 
+import java.math.BigInteger;
+import java.util.Objects;
+
 public class Payload {
     private final JsonObject payload;
 
@@ -54,7 +57,7 @@ public class Payload {
         private String cid;
         private String group;
         private int size;
-        private String expire_at;
+        private BigInteger expire_at;
 
         public Builder(String method) {
             this.method = method;
@@ -75,7 +78,7 @@ public class Payload {
             return this;
         }
 
-        public Builder expire_at(String expire_at) {
+        public Builder expire_at(BigInteger expire_at) {
             this.expire_at = expire_at;
             return this;
         }
@@ -86,7 +89,7 @@ public class Payload {
                 params.add("cid", Json.value(cid));
             }
 
-            if (group != null) {
+            if (Objects.equals(method, "update_group") && group != null) {
                 params.add("group", Json.value(group));
             }
 
@@ -95,7 +98,7 @@ public class Payload {
             }
 
             if (expire_at != null) {
-                params.add("expire_at", Json.value(expire_at));
+                params.add("expire_at", Json.value(String.valueOf(expire_at)));
             }
 
             JsonObject payload = Json.object()

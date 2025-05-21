@@ -14,7 +14,7 @@ public class PinInfo {
     private final String name;
     private final String created;
     private final String owner;
-    private String expireAt;
+    private BigInteger expireAt;
     private BigInteger lastUpdated;
 
     public PinInfo(Builder builder) {
@@ -47,7 +47,7 @@ public class PinInfo {
         return this.owner;
     }
 
-    public String getExpire_at() {
+    public BigInteger getExpire_at() {
         return expireAt;
     }
 
@@ -55,16 +55,15 @@ public class PinInfo {
         return this.lastUpdated;
     }
 
-    public void update(String expireAt) {
+    public void setLastUpdated(BigInteger lastUpdated) {
+        this.lastUpdated = lastUpdated;
+    }
+
+    public void setExpireAt(BigInteger expireAt) {
+        this.expireAt = expireAt;
+    }
+    public void update(BigInteger expireAt) {
         this.expireAt = (expireAt == null) ? this.expireAt : expireAt;
-        this.lastUpdated = BigInteger.valueOf(Context.getBlockTimestamp());
-    }
-
-    public boolean checkOwner(String owner) {
-        return this.owner.equals(owner);
-    }
-
-    public void unpin() {
         this.lastUpdated = BigInteger.valueOf(Context.getBlockTimestamp());
     }
 
@@ -92,7 +91,7 @@ public class PinInfo {
                 .name(r.readNullable(String.class))
                 .created(r.readString())
                 .owner(r.readString())
-                .expireAt(r.readString())
+                .expireAt(r.readBigInteger())
                 .lastUpdated(r.readBigInteger())
                 .build();
 
@@ -106,24 +105,9 @@ public class PinInfo {
                 Map.entry("group", this.group),
                 Map.entry("name", this.name),
                 Map.entry("created", this.created),
-                Map.entry("owner", this.owner),
-                Map.entry("expire_at", this.expireAt)
+                Map.entry("owner", this.owner)
         );
     }
-
-    @Override
-    public String toString() {
-        return "PinInfo{" +
-                "cid='" + cid + '\'' +
-                ", group='" + group + '\'' +
-                ", name='" + name + '\'' +
-                ", created='" + created + '\'' +
-                ", owner='" + owner + '\'' +
-                ", expireAt='" + expireAt + '\'' +
-                ", lastUpdated=" + lastUpdated +
-                '}';
-    }
-
 
     public static class Builder {
         private String cid;
@@ -131,7 +115,7 @@ public class PinInfo {
         private String name;
         private String created;
         private String owner;
-        private String expireAt;
+        private BigInteger expireAt;
         private BigInteger lastUpdated;
 
         public Builder cid(String cid) {
@@ -159,7 +143,7 @@ public class PinInfo {
             return this;
         }
 
-        public Builder expireAt(String expireAt){
+        public Builder expireAt(BigInteger expireAt){
             this.expireAt = expireAt;
             return this;
         }

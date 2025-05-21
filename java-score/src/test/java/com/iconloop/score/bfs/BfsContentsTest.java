@@ -1,29 +1,26 @@
-
 package com.iconloop.score.bfs;
 
 import com.iconloop.score.bfs.util.Jwt;
-import com.iconloop.score.test.Account;
-import com.iconloop.score.test.Score;
-import com.iconloop.score.test.ServiceManager;
-import com.iconloop.score.test.TestBase;
+import com.iconloop.score.test.*;
 import com.parametacorp.jwt.Payload;
 import com.parametacorp.util.Converter;
 import foundation.icon.did.core.Algorithm;
 import foundation.icon.did.core.AlgorithmProvider;
 import foundation.icon.did.core.DidKeyHolder;
 import foundation.icon.did.exceptions.AlgorithmException;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
-import score.*;
+import org.junit.jupiter.api.*;
+import score.UserRevertedException;
 import score.impl.Crypto;
+
 import java.math.BigInteger;
-import java.time.Instant;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-
+@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class BfsContentsTest extends TestBase {
+    private final BigInteger UNPIN_STATE = BigInteger.valueOf(1);
+    private static final BigInteger ONE_SECOND = BigInteger.valueOf(1_000_000L);
     private static final ServiceManager sm = getServiceManager();
     private static final Account owner1 = sm.createAccount();
     private static final Account owner2 = sm.createAccount();
@@ -41,11 +38,11 @@ public class BfsContentsTest extends TestBase {
         key2 = createDidAndKeyHolder("key2");
 
         // setup PRE nodes
-        bfsContentsScore.invoke(owner1, "add_node","TEST_NODE_0", "http://testNode0", null, null, null);
-        bfsContentsScore.invoke(owner1, "add_node","TEST_NODE_1", "http://testNode1", null, null, null);
-        bfsContentsScore.invoke(owner1, "add_node","TEST_NODE_2", "http://testNode2", null, null, null);
-        bfsContentsScore.invoke(owner1, "add_node","TEST_NODE_3", "http://testNode3", null, null, null);
-        bfsContentsScore.invoke(owner1, "add_node","TEST_NODE_4", "http://testNode4", null, null, null);
+        bfsContentsScore.invoke(owner1, "add_node", "TEST_NODE_0", "http://testNode0", null, null, null);
+        bfsContentsScore.invoke(owner1, "add_node", "TEST_NODE_1", "http://testNode1", null, null, null);
+        bfsContentsScore.invoke(owner1, "add_node", "TEST_NODE_2", "http://testNode2", null, null, null);
+        bfsContentsScore.invoke(owner1, "add_node", "TEST_NODE_3", "http://testNode3", null, null, null);
+        bfsContentsScore.invoke(owner1, "add_node", "TEST_NODE_4", "http://testNode4", null, null, null);
     }
 
     private static DidKeyHolder createDidAndKeyHolder(String kid) throws AlgorithmException {
@@ -53,9 +50,7 @@ public class BfsContentsTest extends TestBase {
         var pubkey = algorithm.publicKeyToByte(keyProvider.getPublicKey());
         var did = createDummyDid(pubkey);
         didScore.invoke(owner1, "register", did, kid, pubkey);
-        return new DidKeyHolder.Builder(keyProvider)
-                .did(did)
-                .build();
+        return new DidKeyHolder.Builder(keyProvider).did(did).build();
     }
 
     private static String createDummyDid(byte[] seeds) {
@@ -71,29 +66,29 @@ public class BfsContentsTest extends TestBase {
         private String cid;
         private String group;
         private int size;
-        private String expire_at;
+        private BigInteger expire_at;
 
-        public ParamsBuilder(DidKeyHolder signer, String method){
+        public ParamsBuilder(DidKeyHolder signer, String method) {
             this.signer = signer;
             this.method = method;
         }
 
-        public ParamsBuilder cid(String cid){
+        public ParamsBuilder cid(String cid) {
             this.cid = cid;
             return this;
         }
 
-        public ParamsBuilder group(String group){
+        public ParamsBuilder group(String group) {
             this.group = group;
             return this;
         }
 
-        public ParamsBuilder size(int size){
+        public ParamsBuilder size(int size) {
             this.size = size;
             return this;
         }
 
-        public ParamsBuilder expire_at(String expire_at){
+        public ParamsBuilder expire_at(BigInteger expire_at) {
             this.expire_at = expire_at;
             return this;
         }
@@ -114,117 +109,134 @@ public class BfsContentsTest extends TestBase {
             if (expire_at != null) {
                 pb.expire_at(expire_at);
             }
-            Jwt jwt = new Jwt.Builder(signer.getKid())
-                    .payload(pb.build())
-                    .build();
+            Jwt jwt = new Jwt.Builder(signer.getKid()).payload(pb.build()).build();
             var signature = jwt.sign(signer);
-            var timestamp = BigInteger.valueOf(sm.getBlock().getTimestamp());
             switch (method) {
                 case "pin":
-                    return new Object[] {
-                            cid, 100, expire_at,
+                    return new Object[]{cid, 100, expire_at,
                             // Optional
-                            (group != null) ? group : null, null, signature
-                    };
+                            (group != null) ? group : null, null, signature};
                 case "unpin":
-                    return new Object[] {
-                            cid,
+                    return new Object[]{cid,
                             // Optional
-                            signature,
-                    };
+                            signature,};
                 case "update_pin":
-                    return new Object[] {
-                            cid, expire_at,
+                    return new Object[]{cid, expire_at,
                             // Optional
-                            signature
-                    };
+                            signature};
                 case "remove_pin":
-                    return new Object[] {
-                            cid,
+                    return new Object[]{cid,
                             // Optional
-                            signature
-                    };
+                            signature};
                 case "update_group":
-                    return new Object[] {
-                            group, expire_at,
+                    return new Object[]{group, expire_at,
                             // Optional
-                            signature
-                    };
+                            signature};
             }
             throw new IllegalArgumentException("Invalid method: " + method);
         }
     }
 
     @Test
+    @Order(1)
     void pinTest() throws Exception {
+        // Negative: Invalid expire_at
+        assertThrows(UserRevertedException.class, () -> bfsContentsScore.invoke(owner1, "pin", new ParamsBuilder(key1, "pin").cid("TEST_CID").size(100).expire_at(UNPIN_STATE).build()));
+
         //Pin
-        String pinTimeStamp = GetMicrosecondTimestamp();
-        bfsContentsScore.invoke(owner1, "pin",
-                new ParamsBuilder(key1, "pin")
-                        .cid("TEST_CID")
-                        .size(100)
-                        .expire_at(pinTimeStamp)
-                        .build());
+        BigInteger pinTimeStamp = getTimeStamp(1);
+        bfsContentsScore.invoke(owner1, "pin", new ParamsBuilder(key1, "pin").cid("TEST_CID").size(100).expire_at(pinTimeStamp).build());
         var pin = (Map<String, Object>) bfsContentsScore.call("get_pin", key1.getDid(), "TEST_CID");
         System.out.println(pin);
         assertEquals(pinTimeStamp, pin.get("expire_at"));
 
+        // Negative: try to add with the same cid
+        assertThrows(UserRevertedException.class, () -> bfsContentsScore.invoke(owner1, "pin", new ParamsBuilder(key1, "pin").cid("TEST_CID").size(100).expire_at(pinTimeStamp).build()));
+
+
+        // Positive: Another owner adds the same cid
+        bfsContentsScore.invoke(owner2, "pin", new ParamsBuilder(key2, "pin").cid("TEST_CID").size(100).expire_at(pinTimeStamp).build());
+        pin = (Map<String, Object>) bfsContentsScore.call("get_pin", key1.getDid(), "TEST_CID");
+        System.out.println(pin);
+        assertEquals(pinTimeStamp, pin.get("expire_at"));
+
+
         //Update
-        String updatePinTimeStamp = GetMicrosecondTimestamp();
-        bfsContentsScore.invoke(owner1, "update_pin",
-                new ParamsBuilder(key1, "update_pin")
-                        .cid("TEST_CID")
-                        .expire_at(updatePinTimeStamp)
-                        .build());
+        BigInteger updatePinTimeStamp = getTimeStamp(1);
+        bfsContentsScore.invoke(owner1, "update_pin", new ParamsBuilder(key1, "update_pin").cid("TEST_CID").expire_at(updatePinTimeStamp).build());
         pin = (Map<String, Object>) bfsContentsScore.call("get_pin", key1.getDid(), "TEST_CID");
         System.out.println(pin);
         assertEquals(updatePinTimeStamp, pin.get("expire_at"));
 
 
         //Unpin
-        bfsContentsScore.invoke(owner1, "unpin",
-                new ParamsBuilder(key1, "unpin")
-                        .cid("TEST_CID")
-                        .build());
+        bfsContentsScore.invoke(owner1, "unpin", new ParamsBuilder(key1, "unpin").cid("TEST_CID").build());
+        pin = (Map<String, Object>) bfsContentsScore.call("get_pin", key1.getDid(), "TEST_CID");
+        System.out.println(pin);
+        assertEquals(UNPIN_STATE, pin.get("expire_at"));
 
 
         //Remove Pin
-        bfsContentsScore.invoke(owner1, "remove_pin",
-                new ParamsBuilder(key1, "remove_pin")
-                        .cid("TEST_CID")
-                        .build());
+        bfsContentsScore.invoke(owner1, "remove_pin", new ParamsBuilder(key1, "remove_pin").cid("TEST_CID").build());
         pin = (Map<String, Object>) bfsContentsScore.call("get_pin", key1.getDid(), "TEST_CID");
         assertNull(pin);
 
+        // Negative: Cannot remove: the item is still pin
+        assertThrows(UserRevertedException.class, () -> bfsContentsScore.invoke(owner2, "remove_pin", new ParamsBuilder(key2, "remove_pin").cid("TEST_CID").build()));
+
+        BigInteger pastTime = getTimeStamp(-1);
+        bfsContentsScore.invoke(owner2, "update_pin", new ParamsBuilder(key2, "update_pin").cid("TEST_CID").expire_at(pastTime).build());
+        pin = (Map<String, Object>) bfsContentsScore.call("get_pin", key2.getDid(), "TEST_CID");
+        System.out.println(pin);
+        assertEquals(pastTime, pin.get("expire_at"));
+
+        bfsContentsScore.invoke(owner2, "remove_pin", new ParamsBuilder(key2, "remove_pin").cid("TEST_CID").build());
+        pin = (Map<String, Object>) bfsContentsScore.call("get_pin", key2.getDid(), "TEST_CID");
+        assertNull(pin);
     }
 
     @Test
+    @Order(2)
     void groupTest() throws Exception {
+        BigInteger pinTimeStamp = getTimeStamp(1);
+        bfsContentsScore.invoke(owner1, "pin", new ParamsBuilder(key1, "pin").cid("TEST_CID").size(100).group("TEST_GROUP").expire_at(pinTimeStamp).build());
+        var pin = (Map<String, Object>) bfsContentsScore.call("get_pin", key1.getDid(), "TEST_CID");
+        assertEquals(pinTimeStamp, pin.get("expire_at"));
+        System.out.println(pin);
+
+
         //update group
-        String updateGroupTimeStamp = GetMicrosecondTimestamp();
-        bfsContentsScore.invoke(owner1, "update_group",
-                new ParamsBuilder(key1, "update_group")
-                        .group("TEST_GROUP")
-                        .expire_at(updateGroupTimeStamp)
-                        .build());
+        BigInteger groupTimeStamp = getTimeStamp(1);
+        bfsContentsScore.invoke(owner1, "update_group", new ParamsBuilder(key1, "update_group").group("TEST_GROUP").expire_at(groupTimeStamp).build());
 
         //check update group
-        var group = (GroupInfo) bfsContentsScore.call("get_group", key1.getDid(), "TEST_GROUP");
+        var group = (Map<String, Object>) bfsContentsScore.call("get_group", key1.getDid(), "TEST_GROUP");
         assertNotNull(group);
-        assertEquals(updateGroupTimeStamp, group.getExpireAt());
+        assertEquals(groupTimeStamp, group.get("expire_at"));
 
-        // Negative: An attempt was made to add a PIN to the group using an owner that does not match the group's registered owner
-        assertThrows(UserRevertedException.class, () -> bfsContentsScore.invoke(owner1, "pin",
-                new ParamsBuilder(key2, "pin")
-                        .cid("TEST_CID")
-                        .size(100)
-                        .group("TEST_GROUP")
-                        .expire_at(GetMicrosecondTimestamp())
-                        .build()));
+
+        BigInteger updateGroupTimeStamp = getTimeStamp(1);
+        bfsContentsScore.invoke(owner1, "update_group", new ParamsBuilder(key1, "update_group").group("TEST_GROUP").expire_at(updateGroupTimeStamp).build());
+
+        //check update group
+        group = (Map<String, Object>) bfsContentsScore.call("get_group", key1.getDid(), "TEST_GROUP");
+        assertNotNull(group);
+        assertEquals(updateGroupTimeStamp, group.get("expire_at"));
+
+        pin = (Map<String, Object>) bfsContentsScore.call("get_pin", key1.getDid(), "TEST_CID");
+        assertEquals(updateGroupTimeStamp, pin.get("expire_at"));
+        System.out.println(pin);
+
+        bfsContentsScore.invoke(owner1, "update_group", new ParamsBuilder(key1, "update_group").group("TEST_GROUP").expire_at(UNPIN_STATE).build());
+
+        pin = (Map<String, Object>) bfsContentsScore.call("get_pin", key1.getDid(), "TEST_CID");
+        assertEquals(UNPIN_STATE, pin.get("expire_at"));
+        System.out.println(pin);
 
     }
 
     @Test
+    @Order(3)
     void nodeTest() throws Exception {
         //add node
         bfsContentsScore.invoke(owner1, "add_node", "TEST_NODE", "http://testNode", null, null, null);
@@ -238,19 +250,27 @@ public class BfsContentsTest extends TestBase {
         assertEquals("TEST_ENDPOINT", node.getEndpoint());
         assertEquals("TEST_NAME", node.getName());
 
+        // Negative: Another owner tries a node update
+        assertThrows(UserRevertedException.class, () -> bfsContentsScore.invoke(owner2, "update_node", "TEST_NODE", "http://updateNode", "TEST_ENDPOINT", "TEST_NAME", null));
+
 
         //remove node
         bfsContentsScore.invoke(owner1, "remove_node", "TEST_NODE");
         node = (NodeInfo) bfsContentsScore.call("get_node", "TEST_NODE");
         assertNull(node);
+
+        // Negative
+        assertThrows(UserRevertedException.class, () -> bfsContentsScore.invoke(owner2, "remove_node", "TEST_NODE"));
     }
 
-    private String GetMicrosecondTimestamp(){
-        Instant now = Instant.now();
-        long seconds = now.getEpochSecond();
-        int nanos = now.getNano();
-        long micros = nanos / 1000;
-        return String.format("%d%06d", seconds, micros);
+    private BigInteger getTimeStamp(int hour) {
+        BigInteger timestampMicros = BigInteger.valueOf(sm.getBlock().getTimestamp());
+
+        BigInteger offsetMicros = BigInteger.valueOf(hour)
+                .multiply(BigInteger.valueOf(3600L))
+                .multiply(ONE_SECOND);
+
+        return timestampMicros.add(offsetMicros);
     }
 
 }
