@@ -138,7 +138,7 @@ public interface BfsContent {
      * @param group The group to which the CID belongs
      * @return Group information
      */
-    Map<String,Object> get_group(String owner, String group);
+    GroupInfo get_group(String owner, String group);
 
     /**
      * Get node information

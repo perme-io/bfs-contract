@@ -15,7 +15,7 @@ public class PinInfo {
     private final long created;
     private final String owner;
     private BigInteger expireAt;
-    private BigInteger lastUpdated;
+    private long lastUpdated;
 
     public PinInfo(Builder builder) {
         this.cid = builder.cid;
@@ -24,7 +24,7 @@ public class PinInfo {
         this.created = builder.created;
         this.owner = builder.owner;
         this.expireAt = builder.expireAt;
-        this.lastUpdated = (builder.lastUpdated != null) ? builder.lastUpdated : BigInteger.valueOf(Context.getBlockTimestamp());
+        this.lastUpdated = Math.max(builder.lastUpdated, created);
     }
 
     public String getCid() {
@@ -51,24 +51,23 @@ public class PinInfo {
         return expireAt;
     }
 
-    public BigInteger getLastUpdated() {
+    public long getLastUpdated() {
         return this.lastUpdated;
     }
 
-    public void setLastUpdated(BigInteger lastUpdated) {
+    public void setLastUpdated(long lastUpdated) {
         this.lastUpdated = lastUpdated;
     }
 
     public void setExpireAt(BigInteger expireAt) {
         this.expireAt = expireAt;
     }
-    public void update(BigInteger expireAt) {
-        this.expireAt = (expireAt == null) ? this.expireAt : expireAt;
-        this.lastUpdated = BigInteger.valueOf(Context.getBlockTimestamp());
-    }
 
-    public boolean checkLastUpdated(BigInteger lastUpdated) {
-        return this.lastUpdated.equals(lastUpdated);
+    public void update(Builder attrs) {
+        if (attrs.expireAt != null) {
+            this.expireAt = attrs.expireAt;
+        }
+        this.lastUpdated = attrs.lastUpdated;
     }
 
     public static void writeObject(ObjectWriter w, PinInfo i) {
@@ -92,7 +91,7 @@ public class PinInfo {
                 .created(r.readLong())
                 .owner(r.readString())
                 .expireAt(r.readBigInteger())
-                .lastUpdated(r.readBigInteger())
+                .lastUpdated(r.readLong())
                 .build();
 
         r.end();
@@ -116,7 +115,7 @@ public class PinInfo {
         private long created;
         private String owner;
         private BigInteger expireAt;
-        private BigInteger lastUpdated;
+        private long lastUpdated;
 
         public Builder cid(String cid) {
             this.cid = cid;
@@ -148,7 +147,7 @@ public class PinInfo {
             return this;
         }
 
-        public Builder lastUpdated(BigInteger lastUpdated){
+        public Builder lastUpdated(long lastUpdated){
             this.lastUpdated = lastUpdated;
             return this;
         }

@@ -18,7 +18,6 @@ public interface BfsContentEvent {
      * @param event BFS Event
      * @param value1
      * @param value2
-     * @param nonce
      *
      * BFSEvent handles multiple BFS events within a single EventLog
      *  Add Pin -> event: "AddPin", value1: "cid", value2:"owner"
@@ -31,5 +30,5 @@ public interface BfsContentEvent {
      *  Update Node -> event : "UpdateNode", value1: "peer_id", value2: "endpoint"
      */
     @EventLog(indexed=1)
-    void BFSEvent(String event, String value1, String value2, BigInteger nonce);
+    void BFSEvent(String event, String value1, String value2);
 }

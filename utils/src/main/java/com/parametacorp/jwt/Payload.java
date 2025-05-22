@@ -16,7 +16,7 @@ public class Payload {
         this.payload = payload;
     }
 
-    public boolean validate(JsonObject actual) {
+    public boolean validate(JsonObject actual, long currentHeight) {
         if (actual == null) {
             return false;
         }
@@ -40,6 +40,10 @@ public class Payload {
                     if (!actualValue.isNumber()) {
                         return false;
                     }
+                    if (key.equals("base_height") &&
+                            (actualValue.asLong() < expected.asLong() || currentHeight <= actualValue.asLong())) {
+                        return false;
+                    }
                 } else {
                     return false;
                 }
@@ -59,6 +63,7 @@ public class Payload {
         private String group;
         private int size;
         private BigInteger expire_at;
+        private long baseHeight;
 
         public Builder(String method) {
             this.method = method;
@@ -84,6 +89,11 @@ public class Payload {
             return this;
         }
 
+        public Builder baseHeight(long height) {
+            this.baseHeight = height;
+            return this;
+        }
+
         public Payload build() {
             JsonObject params = Json.object();
             if (cid != null) {
@@ -100,6 +110,10 @@ public class Payload {
 
             if (expire_at != null) {
                 params.add("expire_at", Json.value(String.valueOf(expire_at)));
+            }
+
+            if (baseHeight > 0) {
+                params.add("base_height", Json.value(baseHeight));
             }
 
             JsonObject payload = Json.object()

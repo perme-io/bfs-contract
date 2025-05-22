@@ -67,6 +67,7 @@ public class BfsContentsTest extends TestBase {
         private String group;
         private int size;
         private BigInteger expire_at;
+        private long baseHeight;
 
         public ParamsBuilder(DidKeyHolder signer, String method) {
             this.signer = signer;
@@ -93,6 +94,11 @@ public class BfsContentsTest extends TestBase {
             return this;
         }
 
+        public ParamsBuilder baseHeight(long baseHeight) {
+            this.baseHeight = baseHeight;
+            return this;
+        }
+
         public Object[] build() throws AlgorithmException {
             var pb = new Payload.Builder(method);
             if (cid != null) {
@@ -109,8 +115,16 @@ public class BfsContentsTest extends TestBase {
             if (expire_at != null) {
                 pb.expire_at(expire_at);
             }
-            Jwt jwt = new Jwt.Builder(signer.getKid()).payload(pb.build()).build();
-            var signature = jwt.sign(signer);
+
+            if (baseHeight > 0) {
+                pb.baseHeight(baseHeight);
+            }
+
+            String signature = null;
+            if (signer != null){
+                Jwt jwt = new Jwt.Builder(signer.getKid()).payload(pb.build()).build();
+                signature = jwt.sign(signer);
+            }
             switch (method) {
                 case "pin":
                     return new Object[]{cid, 100, expire_at,
@@ -151,7 +165,16 @@ public class BfsContentsTest extends TestBase {
         assertEquals(pinTimeStamp, pin.get("expire_at"));
 
         // Negative: try to add with the same cid
-        assertThrows(UserRevertedException.class, () -> bfsContentsScore.invoke(owner1, "pin", new ParamsBuilder(key1, "pin").cid("TEST_CID").size(100).expire_at(pinTimeStamp).build()));
+        assertThrows(UserRevertedException.class, () ->
+                bfsContentsScore.invoke(owner1, "pin", new ParamsBuilder(key1, "pin").cid("TEST_CID").size(100).expire_at(pinTimeStamp).build()));
+
+
+        //Pin (non did_sign)
+        BigInteger pinTimeStampNonDidSign = getTimeStamp(1);
+        bfsContentsScore.invoke(owner1, "pin", new ParamsBuilder(null, "pin").cid("TEST_CID_NON_DIDSIGN").size(100).expire_at(pinTimeStampNonDidSign).build());
+        pin = (Map<String, Object>) bfsContentsScore.call("get_pin", owner1.getAddress().toString(), "TEST_CID_NON_DIDSIGN");
+        System.out.println(pin);
+        assertEquals(pinTimeStampNonDidSign, pin.get("expire_at"));
 
 
         // Positive: Another owner adds the same cid
@@ -163,10 +186,28 @@ public class BfsContentsTest extends TestBase {
 
         //Update
         BigInteger updatePinTimeStamp = getTimeStamp(1);
-        bfsContentsScore.invoke(owner1, "update_pin", new ParamsBuilder(key1, "update_pin").cid("TEST_CID").expire_at(updatePinTimeStamp).build());
+        bfsContentsScore.invoke(owner1, "update_pin", new ParamsBuilder(key1, "update_pin")
+                .cid("TEST_CID").expire_at(updatePinTimeStamp).baseHeight(sm.getBlock().getHeight()).build());
         pin = (Map<String, Object>) bfsContentsScore.call("get_pin", key1.getDid(), "TEST_CID");
         System.out.println(pin);
         assertEquals(updatePinTimeStamp, pin.get("expire_at"));
+
+        //Update ( non did_sign )
+        BigInteger updatePinTimeStampNonDidSign = getTimeStamp(1);
+        bfsContentsScore.invoke(owner1, "update_pin", new ParamsBuilder(null, "update_pin")
+                .cid("TEST_CID_NON_DIDSIGN").expire_at(updatePinTimeStampNonDidSign).baseHeight(sm.getBlock().getHeight()).build());
+        pin = (Map<String, Object>) bfsContentsScore.call("get_pin", owner1.getAddress().toString(), "TEST_CID_NON_DIDSIGN");
+        System.out.println(pin);
+        assertEquals(updatePinTimeStampNonDidSign, pin.get("expire_at"));
+
+
+        // Negative: try to update with an invalid baseHeight
+        final long invalidBaseHeight = sm.getBlock().getHeight() - 2;
+        assertThrows(UserRevertedException.class, () -> bfsContentsScore.invoke(owner1, "update_pin",
+                new ParamsBuilder(key1, "update_pin").cid("TEST_CID").expire_at(updatePinTimeStamp).baseHeight(invalidBaseHeight).build()));
+        final long invalidBaseHeight2 = sm.getBlock().getHeight() + 1;
+        assertThrows(UserRevertedException.class, () -> bfsContentsScore.invoke(owner1, "update_pin",
+                new ParamsBuilder(key1, "update_pin").cid("TEST_CID").expire_at(updatePinTimeStamp).baseHeight(invalidBaseHeight2).build()));
 
 
         //Unpin
@@ -185,7 +226,8 @@ public class BfsContentsTest extends TestBase {
         assertThrows(UserRevertedException.class, () -> bfsContentsScore.invoke(owner2, "remove_pin", new ParamsBuilder(key2, "remove_pin").cid("TEST_CID").build()));
 
         BigInteger pastTime = getTimeStamp(-1);
-        bfsContentsScore.invoke(owner2, "update_pin", new ParamsBuilder(key2, "update_pin").cid("TEST_CID").expire_at(pastTime).build());
+        bfsContentsScore.invoke(owner2, "update_pin",
+                new ParamsBuilder(key2, "update_pin").cid("TEST_CID").expire_at(pastTime).baseHeight(sm.getBlock().getHeight()).build());
         pin = (Map<String, Object>) bfsContentsScore.call("get_pin", key2.getDid(), "TEST_CID");
         System.out.println(pin);
         assertEquals(pastTime, pin.get("expire_at"));
@@ -199,39 +241,64 @@ public class BfsContentsTest extends TestBase {
     @Order(2)
     void groupTest() throws Exception {
         BigInteger pinTimeStamp = getTimeStamp(1);
-        bfsContentsScore.invoke(owner1, "pin", new ParamsBuilder(key1, "pin").cid("TEST_CID").size(100).group("TEST_GROUP").expire_at(pinTimeStamp).build());
+        bfsContentsScore.invoke(owner1, "pin", new ParamsBuilder(key1, "pin")
+                .cid("TEST_CID").size(100).group("TEST_GROUP").expire_at(pinTimeStamp).build());
         var pin = (Map<String, Object>) bfsContentsScore.call("get_pin", key1.getDid(), "TEST_CID");
         assertEquals(pinTimeStamp, pin.get("expire_at"));
         System.out.println(pin);
 
 
-        //update group
+        //create group
         BigInteger groupTimeStamp = getTimeStamp(1);
-        bfsContentsScore.invoke(owner1, "update_group", new ParamsBuilder(key1, "update_group").group("TEST_GROUP").expire_at(groupTimeStamp).build());
-
-        //check update group
-        var group = (Map<String, Object>) bfsContentsScore.call("get_group", key1.getDid(), "TEST_GROUP");
+        bfsContentsScore.invoke(owner1, "update_group",
+                new ParamsBuilder(key1, "update_group").group("TEST_GROUP").expire_at(groupTimeStamp).baseHeight(sm.getBlock().getHeight()).build());
+        var group = (GroupInfo) bfsContentsScore.call("get_group", key1.getDid(), "TEST_GROUP");
         assertNotNull(group);
-        assertEquals(groupTimeStamp, group.get("expire_at"));
+        assertEquals(groupTimeStamp, group.getExpire_at());
 
+        //create group ( non did_sign )
+        BigInteger groupTimeStampNonDidSign = getTimeStamp(1);
+        bfsContentsScore.invoke(owner1, "update_group",
+                new ParamsBuilder(null, "update_group").group("TEST_GROUP_NON_DIDSIGN").expire_at(groupTimeStampNonDidSign).baseHeight(sm.getBlock().getHeight()).build());
+        group = (GroupInfo) bfsContentsScore.call("get_group", owner1.getAddress().toString(), "TEST_GROUP_NON_DIDSIGN");
+        assertNotNull(group);
+        assertEquals(groupTimeStampNonDidSign, group.getExpire_at());
 
+        //update group
         BigInteger updateGroupTimeStamp = getTimeStamp(1);
-        bfsContentsScore.invoke(owner1, "update_group", new ParamsBuilder(key1, "update_group").group("TEST_GROUP").expire_at(updateGroupTimeStamp).build());
-
-        //check update group
-        group = (Map<String, Object>) bfsContentsScore.call("get_group", key1.getDid(), "TEST_GROUP");
+        bfsContentsScore.invoke(owner1, "update_group",
+                new ParamsBuilder(key1, "update_group").group("TEST_GROUP").expire_at(updateGroupTimeStamp).baseHeight(sm.getBlock().getHeight()).build());
+        group = (GroupInfo) bfsContentsScore.call("get_group", key1.getDid(), "TEST_GROUP");
         assertNotNull(group);
-        assertEquals(updateGroupTimeStamp, group.get("expire_at"));
-
+        assertEquals(updateGroupTimeStamp, group.getExpire_at());
         pin = (Map<String, Object>) bfsContentsScore.call("get_pin", key1.getDid(), "TEST_CID");
         assertEquals(updateGroupTimeStamp, pin.get("expire_at"));
         System.out.println(pin);
 
-        bfsContentsScore.invoke(owner1, "update_group", new ParamsBuilder(key1, "update_group").group("TEST_GROUP").expire_at(UNPIN_STATE).build());
 
+        //update group ( non did_sign )
+        BigInteger updateGroupTimeStampNonDidSign = getTimeStamp(1);
+        bfsContentsScore.invoke(owner1, "update_group",
+                new ParamsBuilder(key1, "update_group").group("TEST_GROUP_NON_DIDSIGN").expire_at(updateGroupTimeStampNonDidSign).baseHeight(sm.getBlock().getHeight()).build());
+        group = (GroupInfo) bfsContentsScore.call("get_group", key1.getDid(), "TEST_GROUP_NON_DIDSIGN");
+        assertNotNull(group);
+        assertEquals(updateGroupTimeStampNonDidSign, group.getExpire_at());
+
+
+        // Negative: try to update with an invalid baseHeight
+        final long invalidBaseHeight = sm.getBlock().getHeight() - 2;
+        assertThrows(UserRevertedException.class, () -> bfsContentsScore.invoke(owner1, "update_group",
+                new ParamsBuilder(key1, "update_group").group("TEST_GROUP").expire_at(updateGroupTimeStamp).baseHeight(invalidBaseHeight).build()));
+        final long invalidBaseHeight2 = sm.getBlock().getHeight() + 1;
+        assertThrows(UserRevertedException.class, () -> bfsContentsScore.invoke(owner1, "update_group",
+                new ParamsBuilder(key1, "update_group").group("TEST_GROUP").expire_at(updateGroupTimeStamp).baseHeight(invalidBaseHeight2).build()));
+
+        bfsContentsScore.invoke(owner1, "update_group",
+                new ParamsBuilder(key1, "update_group").group("TEST_GROUP").expire_at(UNPIN_STATE).baseHeight(sm.getBlock().getHeight()).build());
         pin = (Map<String, Object>) bfsContentsScore.call("get_pin", key1.getDid(), "TEST_CID");
         assertEquals(UNPIN_STATE, pin.get("expire_at"));
         System.out.println(pin);
+
 
     }
 
