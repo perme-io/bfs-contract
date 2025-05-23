@@ -40,8 +40,11 @@ public class Payload {
                     if (!actualValue.isNumber()) {
                         return false;
                     }
-                    if (key.equals("base_height") &&
-                            (actualValue.asLong() < expected.asLong() || currentHeight <= actualValue.asLong())) {
+                    if (key.equals("base_height")) {
+                        if (actualValue.asLong() < expected.asLong() || currentHeight <= actualValue.asLong()) {
+                            return false;
+                        }
+                    } else if (actualValue.asLong() !=  expected.asLong()) {
                         return false;
                     }
                 } else {
