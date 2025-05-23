@@ -9,7 +9,7 @@ import java.util.Map;
 
 public class CidInfo {
     private final String cid;
-    private final Integer size;
+    private final BigInteger size;
     private final BigInteger replicationMin;
     private final BigInteger replicationMax;
     private String[] userAllocations;
@@ -30,7 +30,7 @@ public class CidInfo {
         return cid;
     }
 
-    public Integer getSize() {
+    public BigInteger getSize() {
         return size;
     }
 
@@ -80,7 +80,7 @@ public class CidInfo {
         r.beginList();
         CidInfo t = new Builder()
                 .cid(r.readString())
-                .size(r.readInt())
+                .size(r.readBigInteger())
                 .replicationMin(r.readBigInteger())
                 .replicationMax(r.readBigInteger())
                 .userAllocations(Helper.JsonStringToStringList("userAllocations", r.readNullable(String.class)))
@@ -104,7 +104,7 @@ public class CidInfo {
 
     public static class Builder {
         private String cid;
-        private Integer size;
+        private BigInteger size;
         private BigInteger replicationMin;
         private BigInteger replicationMax;
         private String[] userAllocations;
@@ -116,7 +116,7 @@ public class CidInfo {
             return this;
         }
 
-        public Builder size(Integer size) {
+        public Builder size(BigInteger size) {
             this.size = size;
             return this;
         }

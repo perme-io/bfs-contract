@@ -175,13 +175,13 @@ public class BfsContents implements BfsContent, BfsContentEvent{
     @Override
     @External()
     public void pin(String cid,
-                    int size,
+                    BigInteger size,
                     BigInteger expire_at,
                     @Optional String group,
                     @Optional String name,
                     @Optional String did_sign) {
         Context.require(!cid.isEmpty(), "Blank key is not allowed.");
-        Context.require(size > 0, "Size must be positive");
+        Context.require(expire_at.compareTo(BigInteger.ZERO) > 0, "expire_at must be greater than 0.");
         BigInteger blockTimestamp = BigInteger.valueOf(Context.getBlockTimestamp());
         Context.require(expire_at.compareTo(blockTimestamp) > 0, "expire_at must be greater than blockTimestamp");
 

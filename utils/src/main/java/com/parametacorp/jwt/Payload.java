@@ -64,7 +64,7 @@ public class Payload {
         private final String method;
         private String cid;
         private String group;
-        private int size;
+        private BigInteger size;
         private BigInteger expire_at;
         private long baseHeight;
 
@@ -82,7 +82,7 @@ public class Payload {
             return this;
         }
 
-        public Builder size(int size) {
+        public Builder size(BigInteger size) {
             this.size = size;
             return this;
         }
@@ -107,12 +107,12 @@ public class Payload {
                 params.add("group", Json.value(group));
             }
 
-            if (size > 0) {
-                params.add("size", Json.value(size));
+            if (size != null) {
+                params.add("size", Json.value(size.toString(16)));
             }
 
             if (expire_at != null) {
-                params.add("expire_at", Json.value(String.valueOf(expire_at)));
+                params.add("expire_at", Json.value(expire_at.toString(16)));
             }
 
             if (baseHeight > 0) {

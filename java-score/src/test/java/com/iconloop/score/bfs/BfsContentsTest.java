@@ -65,7 +65,7 @@ public class BfsContentsTest extends TestBase {
         private final String method;
         private String cid;
         private String group;
-        private int size;
+        private BigInteger size;
         private BigInteger expire_at;
         private long baseHeight;
 
@@ -84,7 +84,7 @@ public class BfsContentsTest extends TestBase {
             return this;
         }
 
-        public ParamsBuilder size(int size) {
+        public ParamsBuilder size(BigInteger size) {
             this.size = size;
             return this;
         }
@@ -109,7 +109,7 @@ public class BfsContentsTest extends TestBase {
                 pb.group(group);
             }
 
-            if (size != 0) {
+            if (size != null) {
                 pb.size(size);
             }
             if (expire_at != null) {
@@ -155,30 +155,30 @@ public class BfsContentsTest extends TestBase {
     @Order(1)
     void pinTest() throws Exception {
         // Negative: Invalid expire_at
-        assertThrows(UserRevertedException.class, () -> bfsContentsScore.invoke(owner1, "pin", new ParamsBuilder(key1, "pin").cid("TEST_CID").size(100).expire_at(UNPIN_STATE).build()));
+        assertThrows(UserRevertedException.class, () -> bfsContentsScore.invoke(owner1, "pin", new ParamsBuilder(key1, "pin").cid("TEST_CID").size(BigInteger.valueOf(100)).expire_at(UNPIN_STATE).build()));
 
         //Pin
         BigInteger pinTimeStamp = getTimeStamp(1);
-        bfsContentsScore.invoke(owner1, "pin", new ParamsBuilder(key1, "pin").cid("TEST_CID").size(100).expire_at(pinTimeStamp).build());
+        bfsContentsScore.invoke(owner1, "pin", new ParamsBuilder(key1, "pin").cid("TEST_CID").size(BigInteger.valueOf(100)).expire_at(pinTimeStamp).build());
         var pin = (Map<String, Object>) bfsContentsScore.call("get_pin", key1.getDid(), "TEST_CID");
         System.out.println(pin);
         assertEquals(pinTimeStamp, pin.get("expire_at"));
 
         // Negative: try to add with the same cid
         assertThrows(UserRevertedException.class, () ->
-                bfsContentsScore.invoke(owner1, "pin", new ParamsBuilder(key1, "pin").cid("TEST_CID").size(100).expire_at(pinTimeStamp).build()));
+                bfsContentsScore.invoke(owner1, "pin", new ParamsBuilder(key1, "pin").cid("TEST_CID").size(BigInteger.valueOf(100)).expire_at(pinTimeStamp).build()));
 
 
         //Pin (non did_sign)
         BigInteger pinTimeStampNonDidSign = getTimeStamp(1);
-        bfsContentsScore.invoke(owner1, "pin", new ParamsBuilder(null, "pin").cid("TEST_CID_NON_DIDSIGN").size(100).expire_at(pinTimeStampNonDidSign).build());
+        bfsContentsScore.invoke(owner1, "pin", new ParamsBuilder(null, "pin").cid("TEST_CID_NON_DIDSIGN").size(BigInteger.valueOf(100)).expire_at(pinTimeStampNonDidSign).build());
         pin = (Map<String, Object>) bfsContentsScore.call("get_pin", owner1.getAddress().toString(), "TEST_CID_NON_DIDSIGN");
         System.out.println(pin);
         assertEquals(pinTimeStampNonDidSign, pin.get("expire_at"));
 
 
         // Positive: Another owner adds the same cid
-        bfsContentsScore.invoke(owner2, "pin", new ParamsBuilder(key2, "pin").cid("TEST_CID").size(100).expire_at(pinTimeStamp).build());
+        bfsContentsScore.invoke(owner2, "pin", new ParamsBuilder(key2, "pin").cid("TEST_CID").size(BigInteger.valueOf(100)).expire_at(pinTimeStamp).build());
         pin = (Map<String, Object>) bfsContentsScore.call("get_pin", key1.getDid(), "TEST_CID");
         System.out.println(pin);
         assertEquals(pinTimeStamp, pin.get("expire_at"));
@@ -242,7 +242,7 @@ public class BfsContentsTest extends TestBase {
     void groupTest() throws Exception {
         BigInteger pinTimeStamp = getTimeStamp(1);
         bfsContentsScore.invoke(owner1, "pin", new ParamsBuilder(key1, "pin")
-                .cid("TEST_CID").size(100).group("TEST_GROUP").expire_at(pinTimeStamp).build());
+                .cid("TEST_CID").size(BigInteger.valueOf(100)).group("TEST_GROUP").expire_at(pinTimeStamp).build());
         var pin = (Map<String, Object>) bfsContentsScore.call("get_pin", key1.getDid(), "TEST_CID");
         assertEquals(pinTimeStamp, pin.get("expire_at"));
         System.out.println(pin);

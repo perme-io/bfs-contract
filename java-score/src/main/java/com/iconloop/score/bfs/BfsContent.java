@@ -45,7 +45,7 @@ public interface BfsContent {
      *     "result": {
      *          "cid": "zb2rhe5P4gXftAwvA4eXQ5HJwsER2owDyS9sKaQRRVQPn93bA",
      *          "group": "parameta-group",
-     *          "size": 100,
+     *          "size": "0x64",
      *          "name": "parameta page",
      *          "created": 1000,
      *          "owner": "hx5b356b0c3231baa7f2b8f6833267ae1ff178f0b4",
@@ -76,7 +76,7 @@ public interface BfsContent {
      * @param did_sign (Optional) DID signature (JWT)
      */
     void pin(String cid,
-             int size,
+             BigInteger size,
              BigInteger expire_at,
              @Optional String group,
              @Optional String name,
