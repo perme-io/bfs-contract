@@ -12,12 +12,14 @@ public class GroupInfo {
     private BigInteger expireAt;
     private final String owner;
     private long lastUpdated;
+    private final long created;
 
     public GroupInfo(Builder builder) {
         this.group = builder.group;
         this.owner = builder.owner;
         this.expireAt = builder.expireAt;
         this.lastUpdated = builder.lastUpdated;
+        this.created = builder.created;
     }
 
     public String getGroup() {
@@ -34,6 +36,10 @@ public class GroupInfo {
 
     public long getLast_updated() {
         return this.lastUpdated;
+    }
+
+    public long getCreated() {
+        return this.created;
     }
 
     public void update(Builder attrs) {
@@ -53,17 +59,19 @@ public class GroupInfo {
                 i.group,
                 i.owner,
                 i.expireAt,
-                i.lastUpdated
+                i.lastUpdated,
+                i.created
         );
     }
 
     public static GroupInfo readObject(ObjectReader r) {
         r.beginList();
-        GroupInfo l = new GroupInfo.Builder()
+        GroupInfo l = new Builder()
                 .group(r.readString())
                 .owner(r.readString())
                 .expireAt(r.readBigInteger())
                 .lastUpdated(r.readLong())
+                .created(r.readLong())
                 .build();
 
         r.end();
@@ -75,6 +83,7 @@ public class GroupInfo {
         private String owner;
         private BigInteger expireAt;
         private long lastUpdated;
+        private long created;
 
         public Builder group(String group) {
             this.group = group;
@@ -93,6 +102,11 @@ public class GroupInfo {
 
         public Builder lastUpdated(long lastUpdated){
             this.lastUpdated = lastUpdated;
+            return this;
+        }
+
+        public Builder created(long created){
+            this.created = created;
             return this;
         }
 

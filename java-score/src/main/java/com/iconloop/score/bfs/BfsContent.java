@@ -129,6 +129,7 @@ public interface BfsContent {
      *     "result": {
      *          "group": "parameta-group",
      *          "owner": "hx5b356b0c3231baa7f2b8f6833267ae1ff178f0b4",
+     *          "created": 1000,
      *          "expire_at": "0x6358844FFA754",
      *          "last_updated" : 1000
      *     },

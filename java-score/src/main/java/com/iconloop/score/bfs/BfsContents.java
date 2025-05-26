@@ -520,6 +520,7 @@ public class BfsContents implements BfsContent, BfsContentEvent{
                     .expireAt(expire_at)
                     .owner(owner)
                     .lastUpdated(Context.getBlockHeight())
+                    .created(Context.getBlockHeight())
                     .build();
         }
         this.groupInfos.at(owner).set(group, groupInfo);
