@@ -104,7 +104,8 @@ public class PinInfo {
                 Map.entry("group", this.group),
                 Map.entry("name", this.name),
                 Map.entry("created", this.created),
-                Map.entry("owner", this.owner)
+                Map.entry("owner", this.owner),
+                Map.entry("last_updated", this.lastUpdated)
         );
     }
 

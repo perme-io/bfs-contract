@@ -504,7 +504,7 @@ public class BfsContents implements BfsContent, BfsContentEvent{
                 var expected = new Payload.Builder("update_group")
                         .group(group)
                         .expire_at(expire_at)
-                        .baseHeight(groupInfo.lastUpdated())
+                        .baseHeight(groupInfo.getLast_updated())
                         .build();
                 Context.require(sigChecker.validatePayload(expected), "failed to validate payload");
             }

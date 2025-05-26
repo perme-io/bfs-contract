@@ -32,7 +32,7 @@ public class GroupInfo {
         return this.expireAt;
     }
 
-    public long lastUpdated() {
+    public long getLast_updated() {
         return this.lastUpdated;
     }
 

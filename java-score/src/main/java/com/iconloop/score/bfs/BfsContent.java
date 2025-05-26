@@ -53,7 +53,8 @@ public interface BfsContent {
      *          "replication_max": "0xa",
      *          "user_allocations": [],
      *          "shard_size": "0x3039",
-     *          "expire_at": "0x6358844FFA754"
+     *          "expire_at": "0x6358844FFA754",
+     *          "last_updated" : 1000
      *     },
      *     "id": 1
      * }
@@ -128,7 +129,8 @@ public interface BfsContent {
      *     "result": {
      *          "group": "parameta-group",
      *          "owner": "hx5b356b0c3231baa7f2b8f6833267ae1ff178f0b4",
-     *          "expire_at": "0x6358844FFA754"
+     *          "expire_at": "0x6358844FFA754",
+     *          "last_updated" : 1000
      *     },
      *     "id": 1
      * }
