@@ -240,15 +240,24 @@ public class BfsContents implements BfsContent, BfsContentEvent{
     public void unpin(String cid, @Optional String did_sign) {
         Context.require(!cid.isEmpty(), "Blank key is not allowed.");
         String owner = Context.getCaller().toString();
+        PinInfo pinInfo = null;
         if (did_sign != null) {
+            var sigChecker = new SignatureChecker();
+            Context.require(sigChecker.verifySig(get_did_score(), did_sign), "failed to verify did_sign");
+            owner = sigChecker.getOwnerId();
+            pinInfo = this.pinInfos.at(owner).get(cid);
+            Context.require(pinInfo != null, "Invalid request(unpin) target.");
             var expected = new Payload.Builder("unpin")
                     .cid(cid)
+                    .baseHeight(pinInfo.getLastUpdated())
                     .build();
-            owner = getVerifiedDid(did_sign, expected);
+
+            Context.require(sigChecker.validatePayload(expected), "failed to validate payload");
+        }else{
+            pinInfo = this.pinInfos.at(owner).get(cid);
+            Context.require(pinInfo != null, "Invalid request(unpin) target.");
         }
 
-        PinInfo pinInfo = this.pinInfos.at(owner).get(cid);
-        Context.require(pinInfo != null, "Invalid request(unpin) target.");
 
         pinInfo.setExpireAt(UNPIN_STATE);
         pinInfo.setLastUpdated(Context.getBlockHeight());
