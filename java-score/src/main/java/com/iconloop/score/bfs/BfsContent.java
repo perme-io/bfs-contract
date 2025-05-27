@@ -102,15 +102,6 @@ public interface BfsContent {
                     BigInteger expire_at,
                     @Optional String did_sign);
 
-
-    /**
-     * Delete pin in the contract.
-     *
-     * @param cid The content identifier to be pinned.
-     * @param did_sign (Optional) DID signature (JWT)
-     */
-    void remove_pin(String cid, @Optional String did_sign);
-
     /**
      * Update the group.
      *

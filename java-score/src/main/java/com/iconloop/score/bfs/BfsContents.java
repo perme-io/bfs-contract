@@ -310,37 +310,6 @@ public class BfsContents implements BfsContent, BfsContentEvent{
         BFSEvent(EventType.UpdatePin.name(), cid, pinInfo.getOwner());
     }
 
-    @Override
-    @External()
-    public void remove_pin(String cid, @Optional String did_sign) {
-        String owner = Context.getCaller().toString();
-        if (did_sign != null) {
-            var expected = new Payload.Builder("remove_pin")
-                    .cid(cid)
-                    .build();
-            owner = getVerifiedDid(did_sign, expected);
-        }
-
-        PinInfo pinInfo = this.pinInfos.at(owner).get(cid);
-        Context.require(pinInfo != null, "Invalid request(remove_pin) target.");
-
-        GroupInfo groupInfo = get_group(owner, pinInfo.getGroup());
-        BigInteger expire_at = (groupInfo != null) ? groupInfo.getExpire_at() : pinInfo.getExpire_at();
-
-        BigInteger blockTimestamp = BigInteger.valueOf(Context.getBlockTimestamp());
-        if(expire_at.compareTo(blockTimestamp) > 0){
-            Context.revert(104, "Fixed content can only be deleted after unpinning or expiration.");
-        }
-
-        this.pinInfos.at(owner).set(cid, null);
-
-        CidInfo cidInfo = this.cidInfos.get(cid);
-        if (cidInfo != null && cidInfo.getRefCnt() <= 0) {
-            this.cidInfos.set(cid, null);
-        }
-
-        BFSEvent(EventType.RemovePin.name(), cid, owner);
-    }
 
     @Override
     @External(readonly=true)
@@ -457,24 +426,6 @@ public class BfsContents implements BfsContent, BfsContentEvent{
                 Map.entry("replication_max", cidInfo.getReplication_max()),
                 Map.entry("user_allocations", cidInfo.getUser_allocations())
         );
-    }
-
-    @External()
-    public void reset__() {
-        // TODO 개발 과정에서 컨트랙트 리셋 용도로 사용하는 임시 함수, 운영을 위한 배포시에는 이 메소드는 전체 제거되어야 함.
-        // Check permission
-        Context.require(Context.getOwner().equals(Context.getCaller()), "You do not have permission.");
-
-        String peer_id;
-        int peer_count = this.peers.size();
-        for (int i = 0; i < peer_count; i++) {
-            peer_id = this.peers.pop();
-            this.nodeInfos.set(peer_id, null);
-        }
-
-        this.allocationMin.set(1);
-        this.allocationMax.set(1);
-        this.allocationMargin.set(2);
     }
 
     @Override
