@@ -268,6 +268,9 @@ public class BfsContents implements BfsContent, BfsContentEvent{
                            BigInteger expire_at,
                            @Optional String did_sign) {
         Context.require(!cid.isEmpty(), "Blank key is not allowed.");
+        BigInteger blockTimestamp = BigInteger.valueOf(Context.getBlockTimestamp());
+        Context.require(expire_at.compareTo(blockTimestamp) > 0, "expire_at must be greater than blockTimestamp");
+
         PinInfo pinInfo = null;
         String owner = Context.getCaller().toString();
         if (did_sign != null) {

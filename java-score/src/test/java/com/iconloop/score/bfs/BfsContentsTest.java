@@ -225,12 +225,10 @@ public class BfsContentsTest extends TestBase {
         // Negative: Cannot remove: the item is still pin
         assertThrows(UserRevertedException.class, () -> bfsContentsScore.invoke(owner2, "remove_pin", new ParamsBuilder(key2, "remove_pin").cid("TEST_CID").build()));
 
-        BigInteger pastTime = getTimeStamp(-1);
-        bfsContentsScore.invoke(owner2, "update_pin",
-                new ParamsBuilder(key2, "update_pin").cid("TEST_CID").expire_at(pastTime).baseHeight(sm.getBlock().getHeight()).build());
+        bfsContentsScore.invoke(owner2, "unpin", new ParamsBuilder(key2, "unpin").cid("TEST_CID").build());
         pin = (Map<String, Object>) bfsContentsScore.call("get_pin", key2.getDid(), "TEST_CID");
         System.out.println(pin);
-        assertEquals(pastTime, pin.get("expire_at"));
+        assertEquals(UNPIN_STATE, pin.get("expire_at"));
 
         bfsContentsScore.invoke(owner2, "remove_pin", new ParamsBuilder(key2, "remove_pin").cid("TEST_CID").build());
         pin = (Map<String, Object>) bfsContentsScore.call("get_pin", key2.getDid(), "TEST_CID");
