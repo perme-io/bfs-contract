@@ -51,8 +51,9 @@ public class Payload {
                     return false;
                 }
             }
+            return true;
         }
-        return true;
+        return false;
     }
 
     @Override
