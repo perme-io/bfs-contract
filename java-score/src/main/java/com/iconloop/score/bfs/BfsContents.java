@@ -49,6 +49,7 @@ public class BfsContents implements BfsContent, BfsContentEvent{
 
     @External
     public void set_did_score(Address did_score) {
+        Context.require(Context.getCaller().equals(Context.getOwner()), "Only owner can call this method.");
         this.didScore.set(did_score);
     }
 
@@ -59,6 +60,7 @@ public class BfsContents implements BfsContent, BfsContentEvent{
 
     @External
     public void set_shard_size(BigInteger shard_size) {
+        Context.require(Context.getCaller().equals(Context.getOwner()), "Only owner can call this method.");
         Context.require(shard_size.compareTo(BigInteger.ZERO) > 0, "Shard size must be greater than 0.");
         this.shardSize.set(shard_size);
     }
