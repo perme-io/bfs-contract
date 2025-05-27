@@ -6,8 +6,7 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        classpath 'foundation.icon:gradle-javaee-plugin:0.8.4'
-        classpath 'foundation.icon:icon-sdk:2.5.1'
+        classpath 'foundation.icon:icon-sdk:2.5.2'
     }
 }
 
@@ -22,12 +21,12 @@ dependencies {
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.10.3'
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.10.3'
 
-    testImplementation 'org.web3j:crypto:5.0.0'
-    testImplementation 'foundation.icon:icon-sdk:2.5.1'
+    testImplementation 'foundation.icon:icon-sdk:2.5.2'
     testImplementation fileTree(dir: '../libs', include: 'icon-did-*.jar')
 }
 
 optimizedJar {
+    dependsOn(project(':utils').jar)
     mainClassName = 'com.iconloop.score.bfs.BfsContents'
     from {
         configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
