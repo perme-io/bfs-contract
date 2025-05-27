@@ -505,23 +505,26 @@ public class BfsContents implements BfsContent, BfsContentEvent{
     public void update_group(String group, BigInteger expire_at, @Optional String did_sign) {
         Context.require(!group.isEmpty(), "Blank key is not allowed.");
         String owner = Context.getCaller().toString();
-        var sigChecker = new SignatureChecker();
+        GroupInfo groupInfo = null;
         if (did_sign != null) {
+            var sigChecker = new SignatureChecker();
             Context.require(sigChecker.verifySig(get_did_score(), did_sign), "failed to verify did_sign");
             owner = sigChecker.getOwnerId();
+            groupInfo = get_group(owner, group);
+
+            var updated = (groupInfo != null) ? groupInfo.getLast_updated() : 1;
+            var expectedPayload = new Payload.Builder("update_group")
+                    .group(group)
+                    .expire_at(expire_at)
+                    .baseHeight(updated)
+                    .build();
+            Context.require(sigChecker.validatePayload(expectedPayload), "failed to validate payload");
+        }else{
+            groupInfo = get_group(owner, group);
         }
 
-        GroupInfo groupInfo = get_group(owner, group);
-        if (groupInfo != null){
+        if (groupInfo != null) {
             // Update an existing group
-            if (did_sign != null) {
-                var expected = new Payload.Builder("update_group")
-                        .group(group)
-                        .expire_at(expire_at)
-                        .baseHeight(groupInfo.getLast_updated())
-                        .build();
-                Context.require(sigChecker.validatePayload(expected), "failed to validate payload");
-            }
             var attrs = new GroupInfo.Builder()
                     .expireAt(expire_at);
             attrs.lastUpdated(Context.getBlockHeight());
