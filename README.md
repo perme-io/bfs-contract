@@ -59,7 +59,7 @@ Following environment variables must be set before deploy
 
 Deploy the optimized jar to the network
 ```shell
-./gradlew deployRpc
+./gradlew deployToRpc
 ```
 
 Sample output
@@ -95,5 +95,5 @@ Then you can check the list of nodes with the following command.
 To update the contract with the new code, use the following command.
 
 ```shell
-./gradlew deployRpc -PdeployTarget=<contract address>
+./gradlew deployToRpc -PdeployTarget=<contract address>
 ```
