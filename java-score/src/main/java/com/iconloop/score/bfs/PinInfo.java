@@ -1,6 +1,5 @@
 package com.iconloop.score.bfs;
 
-import score.Context;
 import score.ObjectReader;
 import score.ObjectWriter;
 

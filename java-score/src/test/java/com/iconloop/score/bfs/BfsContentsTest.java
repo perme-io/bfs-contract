@@ -1,14 +1,21 @@
 package com.iconloop.score.bfs;
 
 import com.iconloop.score.bfs.util.Jwt;
-import com.iconloop.score.test.*;
+import com.iconloop.score.test.Account;
+import com.iconloop.score.test.Score;
+import com.iconloop.score.test.ServiceManager;
+import com.iconloop.score.test.TestBase;
 import com.parametacorp.jwt.Payload;
 import com.parametacorp.util.Converter;
 import foundation.icon.did.core.Algorithm;
 import foundation.icon.did.core.AlgorithmProvider;
 import foundation.icon.did.core.DidKeyHolder;
 import foundation.icon.did.exceptions.AlgorithmException;
-import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.MethodOrderer;
+import org.junit.jupiter.api.Order;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestMethodOrder;
 import score.UserRevertedException;
 import score.impl.Crypto;
 

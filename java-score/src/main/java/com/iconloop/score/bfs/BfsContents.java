@@ -1,16 +1,21 @@
 package com.iconloop.score.bfs;
 
 import com.parametacorp.jwt.Payload;
-import score.*;
+import score.Address;
+import score.ArrayDB;
+import score.BranchDB;
+import score.Context;
+import score.DictDB;
+import score.VarDB;
 import score.annotation.EventLog;
 import score.annotation.External;
 import score.annotation.Optional;
 import score.annotation.Payable;
+import scorex.util.HashMap;
 
 import java.math.BigInteger;
 import java.util.List;
 import java.util.Map;
-import scorex.util.HashMap;
 
 enum EventType {
     AddPin,

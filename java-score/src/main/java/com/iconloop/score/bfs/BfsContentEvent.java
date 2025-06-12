@@ -1,14 +1,6 @@
 package com.iconloop.score.bfs;
 
-import score.Address;
 import score.annotation.EventLog;
-import score.annotation.External;
-import score.annotation.Optional;
-import score.annotation.Payable;
-
-import java.math.BigInteger;
-import java.util.List;
-import java.util.Map;
 
 public interface BfsContentEvent {
     /**
