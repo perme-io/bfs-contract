@@ -411,8 +411,10 @@ public class BfsContents implements BfsContent, BfsContentEvent{
     @Override
     @External(readonly=true)
     public Map<String, Object> check_allocations(String cid) {
-        Context.require(cid != null, "Invalid request(check_allocations) target.");
         CidInfo cidInfo = this.cidInfos.get(cid);
+        if (cidInfo == null) {
+            return null;
+        }
         String[] userAllocations = cidInfo.getUser_allocations();
 
         StringBuilder builder = new StringBuilder();
