@@ -415,18 +415,6 @@ public class BfsContents implements BfsContent, BfsContentEvent{
         if (cidInfo == null) {
             return null;
         }
-        String[] userAllocations = cidInfo.getUser_allocations();
-
-        StringBuilder builder = new StringBuilder();
-        for (String allocation : userAllocations) {
-            if (!checkPeerExist(allocation)) {
-                if (builder.length() > 0) {
-                    builder.append(",");
-                }
-                builder.append("\"").append(allocation).append("\"");
-            }
-        }
-
         return Map.ofEntries(
                 Map.entry("cid", cidInfo.getCid()),
                 Map.entry("replication_min", cidInfo.getReplication_min()),
