@@ -417,6 +417,7 @@ public class BfsContents implements BfsContent, BfsContentEvent{
         }
         return Map.ofEntries(
                 Map.entry("cid", cidInfo.getCid()),
+                Map.entry("size", cidInfo.getSize()),
                 Map.entry("replication_min", cidInfo.getReplication_min()),
                 Map.entry("replication_max", cidInfo.getReplication_max()),
                 Map.entry("user_allocations", cidInfo.getUser_allocations())
