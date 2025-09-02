@@ -75,13 +75,15 @@ public interface BfsContent {
      * @param group (Optional) The group to which the CID belongs
      * @param name (Optional) Alias for cid
      * @param did_sign (Optional) DID signature (JWT)
+     * @param user_allocations (Optional) User allocations
      */
     void pin(String cid,
              BigInteger size,
              BigInteger expire_at,
              @Optional String group,
              @Optional String name,
-             @Optional String did_sign);
+             @Optional String did_sign,
+             @Optional String[] user_allocations);
 
     /**
      * Unpins the specified CID, allowing it to be garbage collected.

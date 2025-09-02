@@ -75,7 +75,7 @@ public class BfsContents implements BfsContent, BfsContentEvent{
         return this.shardSize.get();
     }
 
-    public String[] makeAllocations(Integer allocationMin, Integer allocationMax) {
+    public String[] makeAllocations(Integer allocationMin, Integer allocationMax, String[] userAllocations) {
         if (allocationMin > this.peers.size()) {
             Context.revert(100, "Fewer peers to allocate.");
         }
@@ -93,7 +93,7 @@ public class BfsContents implements BfsContent, BfsContentEvent{
         Allocator allocator = new Allocator(Helper.ArrayDBToArray(this.peers),
                                             frontIndex,
                                             backIndex,
-                                            new String[]{},
+                                            userAllocations,
                                             allocationMin,
                                             allocationMax,
                                             allocationMargin, this);
@@ -186,7 +186,8 @@ public class BfsContents implements BfsContent, BfsContentEvent{
                     BigInteger expire_at,
                     @Optional String group,
                     @Optional String name,
-                    @Optional String did_sign) {
+                    @Optional String did_sign,
+                    @Optional String[] user_allocations) {
         Context.require(!cid.isEmpty(), "Blank key is not allowed.");
         Context.require(expire_at.compareTo(BigInteger.ZERO) > 0, "expire_at must be greater than 0.");
         BigInteger blockTimestamp = BigInteger.valueOf(Context.getBlockTimestamp());
@@ -209,7 +210,7 @@ public class BfsContents implements BfsContent, BfsContentEvent{
             // If the cid does not exist, create a new cid.
             Integer replicationMin = this.allocationMin.getOrDefault(1);
             Integer replicationMax = this.allocationMax.getOrDefault(1);
-            String[] userAllocations = makeAllocations(replicationMin, replicationMax);
+            String[] userAllocations = makeAllocations(replicationMin, replicationMax, user_allocations);
             var cidBuilder = new CidInfo.Builder()
                     .cid(cid)
                     .size(size)
